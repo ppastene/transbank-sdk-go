@@ -1,0 +1,11 @@
+# Elementos pendientes
+- Implementaciones
+    - Onepay
+    - Transaccion Completa
+- Requests y Responses
+    - Onepay
+    - Transaccion Completa
+- Pruebas Unitarias
+    - Webpay Plus Mall
+    - Onepay
+    - Transaccion Completa
