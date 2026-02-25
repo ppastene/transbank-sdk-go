@@ -10,7 +10,7 @@ Libreria de integración con la API de Transbank escrito en Go
 - [Manejo de errores](#manejo-de-errores)
 - [Ejemplos avanzados](#ejemplos-avanzados)
     - [Inyección de cliente HTTP](#inyección-de-cliente-http)
-        - [Ejemplo de inyección de Resty](#ejemplo-de-inyección-de-resty)
+        - [Ejemplo de inyección con Resty](#ejemplo-de-inyección-con-resty)
 ## Requisitos
 - Go 1.21.0
 ## Instalación
@@ -18,7 +18,7 @@ Asegurese que su proyecto esté usando Go Modules (deberia haber un archivo go.m
 ```go
 go mod init
 ```
-Luego, importe transbank-go-sdk usando import
+Luego, importe transbank-sdk-go usando import
 ```go
 import github.com/ppastene/transbank-sdk-go
 ```
@@ -144,7 +144,7 @@ Las respuestas que devuelve el metodo son:
 - []byte: La respuesta en crudo de la petición.
 - int: El codigo HTTP de la respuesta
 - error: Error en caso de problemas de comunicación, DNS, hostname, unmarshall
-#### Ejemplo de inyección de Resty
+#### Ejemplo de inyección con Resty
 ```go
 type RestyClient struct {
 	*resty.Client
