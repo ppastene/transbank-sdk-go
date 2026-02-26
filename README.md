@@ -13,6 +13,7 @@ Libreria de integración con la API de Transbank escrito en el lenguaje Go
 - [Ejemplos avanzados](#ejemplos-avanzados)
     - [Inyección de cliente HTTP](#inyección-de-cliente-http)
         - [Ejemplo de inyección con Resty](#ejemplo-de-inyección-con-resty)
+-[Roadmap](#roadmap)
 ## Requisitos
 - Go 1.21.0
 ## Instalación
@@ -180,3 +181,5 @@ func main() {
 	fmt.Println(resp)
 }
 ```
+## Roadmap
+Para revisar lo que aun queda por implementar revise el archivo [TODO.md](./TODO.md).

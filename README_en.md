@@ -13,6 +13,7 @@ Library to connect with the Transbank API written in the Go language
 - [Examples](#examples)
     - [HTTP Client injection](#http-client-injection)
         - [Example using Resty client](#example-using-resty-client)
+-[Roadmap](#roadmap)
 ## Requirements
 - Go 1.21.0
 ## Installation
@@ -180,3 +181,5 @@ func main() {
 	fmt.Println(resp)
 }
 ```
+## Roadmap
+To see what is yet to implement check the [TODO.md](./TODO.md) file.
