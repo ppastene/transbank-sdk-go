@@ -1,45 +1,45 @@
 # Transbank SDK Go
-Libreria de integración con la API de Transbank escrito en el lenguaje Go
+Library to connect with the Transbank API written in the Go language
 
-**Español** | [English](./README_en.md)
-## Índice
-- [Requisitos](#requisitos)
-- [Instalación](#instalación)
-- [Primeros pasos](#primeros-pasos)
-- [Uso](#uso)
+[Spanish](./README.md) | **English**
+## Index
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [First steps](#first-steps)
+- [Use](#use)
   - [Webpay Plus](#webpay-plus)
   - [Webpay Plus Mall](#webpay-plus-mall)
-- [Manejo de errores](#manejo-de-errores)
-- [Ejemplos avanzados](#ejemplos-avanzados)
-    - [Inyección de cliente HTTP](#inyección-de-cliente-http)
-        - [Ejemplo de inyección con Resty](#ejemplo-de-inyección-con-resty)
-## Requisitos
+- [Error management](#error-management)
+- [Examples](#examples)
+    - [HTTP Client injection](#http-client-injection)
+        - [Example using Resty client](#example-using-resty-client)
+## Requirements
 - Go 1.21.0
-## Instalación
-Asegurese que su proyecto esté usando Go Modules (deberia haber un archivo go.mod en la raiz):
+## Installation
+Be sure your project is using Go modules (your project must have a go.mod file in your root):
 ```go
 go mod init
 ```
-Luego, importe transbank-sdk-go usando import
+Then, import transbank-sdk-go using import
 ```go
 import github.com/ppastene/transbank-sdk-go
 ```
-Tambien puede usar el comando go get a traves de la terminal
+Also you can use the go get command in the terminal
 ```go
 go get -u github.com/ppastene/transbank-sdk-go
 ```
-## Primeros pasos
-Declare la funcion del servicio que quiera usar junto con las credenciales
+## First steps
+Declare the function of the service you wanna use along with the credentials
 ```go
 options := &webpay.Options{
     ApiKey: "su api key",
     CommerceCode: "su codigo de comercio",
-    Environment: webpay.IntegrationURL, //Opciones: webpay.IntegrationURL para ambiente de integracion, webpay.ProductionURL para ambiente de produccion.
+    Environment: webpay.IntegrationURL, //Options: webpay.IntegrationURL for integration environment, webpay.ProductionURL for production environment.
 }
 tx := webpay.NewTransaction(options)
 ```
-Con eso ya puede usar los metodos del servicio indicado por la [documentación de Transbank](https://www.transbankdevelopers.cl/documentacion/como_empezar)
-## Uso
+With that you can use the service methods displayed on the [official Transbank documentation](https://www.transbankdevelopers.cl/documentacion/como_empezar)
+## Use
 ### Webpay Plus
 ```go
 options := &webpay.Options{
@@ -55,7 +55,7 @@ res, err := webpayplus.Create("buy_order", "session_id", "amount", "http://url-d
 res, err := webpayplus.Commit("token")
 res, err := webpayplus.Status("token")
 res, err := webpayplus.Refund("token", "amount")
-res, err := webpayplus.Capture("token", "buy_order", "authorization_code", "amount") // Solo en ambientes con opción diferido
+res, err := webpayplus.Capture("token", "buy_order", "authorization_code", "amount") // Only in environments with differ option
 ```
 ### Webpay Plus Mall
 ```go
@@ -81,10 +81,10 @@ res, err := webpayplus.Create("buy_order", "session_id", "http://url-de-retorno.
 res, err := webpayplus.Commit("token")
 res, err := webpayplus.Status("token")
 res, err := webpayplus.Refund("token", "buy_order", "amount", "child_commerce_code")
-res, err := webpayplus.Capture("token", "child_commerce_code", "orden_compra", "authorization_code", "amount") // Solo en ambientes con opción diferido
+res, err := webpayplus.Capture("token", "child_commerce_code", "orden_compra", "authorization_code", "amount") // Only in environments with differ option
 ```
-### Manejo de errores
-Transbank SDK Go maneja un struct para todos los errores que puedan haber
+### Error management
+Transbank SDK Go uses a struct to manage all the errors encountered
 ```go
 type WebpayError struct {
 	Code           int      
@@ -93,60 +93,60 @@ type WebpayError struct {
 }
 ```
 - Code:
-    - -1: Errores ocurridos en el SDK como validaciones
-    - 0: Errores con el cliente HTTP, fallos en la DNS o hostname
-    -  1 hacia arriba: Corresponde al codigo HTTP devueltos por la API de Transbank
-- ServiceMessage: Mensaje de error a modo ilustrativo
-- Cause: El error como tal
+    - -1: Validation errors happened on the SDK before the API call
+    - 0: HTTP client errors
+    -  1 and up: HTTP error code returned on the API response
+- ServiceMessage: Descriptive error
+- Cause: The error as-is
 
-Si se imprime el error se usará el metodo Error() que devuelve un string de ServiceMessage + Cause
+If you print the error it will use the Error() method which will return a string of ServiceMessage + Cause
 ```go
 res, err := webpayplus.Status("")
 if err != nil {
     fmt.Println(err)
 }
 /*
-    Imprime en consola
+    It will print on console
     SDK Validation Error: 'token' cannot be empty
 */
 ```
-Puede usar errors.Unwrap(err) para obtener directamente el error
+You can use errors.Unwrap(err) to get the error directly
 ```go
-res, err := webpayplus.Status("un-token-que-no-existe")
+res, err := webpayplus.Status("non-registered-token")
 if err != nil {
     fmt.Println(errors.Unwrap(err))
 }
 /*
-    Imprime en consola
+    It will print on console
     Invalid value for parameter: token
 */
 ```
-## Ejemplos avanzados
-### Inyección de cliente HTTP
-El SDK posee un cliente HTTP para la comunicación con la API de Transbank. Puede reemplazar aquel cliente con el que desee usar en el SDK.
+## Examples
+### HTTP Client injection
+The SDK includes a HTTP client to communicate with the Transbank API. You can replace that client by injecting a HTTP client of your choice.
 
-Estos son los servicios de los cuales puede inyectar un cliente HTTP
+These are the functions of the services you can inject a HTTP client
 ```go
 func NewTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options)
 func NewMallTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options)
 ```
-La interface contiene el siguiente metodo
+The interface contains the following methhod
 ```go
 type HTTPClientInterface interface {
 	Request(method string, url string, headers map[string]string, payload any) ([]byte, int, error)
 }
 ```
-Los parametros del metodo son:
-- method: El metodo HTTP a ejecutar. Se escribe en mayuscula
-- url: La url a consultar
-- headers: Los headers de la peticion
-- payload: El payload de la peticion. Tiene que ser capaz de convertirse a JSON usando json.Marshal(). Puede venir vacio
+The parameters are:
+- method: The HTTP method. Must be written uppercase
+- url: The url to call
+- headers: The request hearders
+- payload: The request payload. Must be capable to be converted o JSON using json.Marshal(). It can be empty.
 
 Las respuestas que devuelve el metodo son:
-- []byte: La respuesta en crudo de la petición.
-- int: El codigo HTTP de la respuesta
-- error: Error en caso de problemas de comunicación, DNS, hostname, unmarshall
-#### Ejemplo de inyección con Resty
+- []byte: The URL raw response.
+- int: The HTTP code of the response
+- error: The error in case of problems with the DNS, hostname, communication, unmarshalling
+#### Example using Resty client
 ```go
 type RestyClient struct {
 	*resty.Client
