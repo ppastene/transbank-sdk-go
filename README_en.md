@@ -33,8 +33,8 @@ go get -u github.com/ppastene/transbank-sdk-go
 Declare the function of the service you wanna use along with the credentials
 ```go
 options := &webpay.Options{
-    ApiKey: "su api key",
-    CommerceCode: "su codigo de comercio",
+    ApiKey: "the api key",
+    CommerceCode: "the commerce code",
     Environment: webpay.IntegrationURL, //Options: webpay.IntegrationURL for integration environment, webpay.ProductionURL for production environment.
 }
 tx := webpay.NewTransaction(options)
@@ -52,7 +52,7 @@ webpayplus := webpay.NewTransaction(options)
 details := []webpay.MallDetail{
 
 }
-res, err := webpayplus.Create("buy_order", "session_id", "amount", "http://url-de-retorno.cl")
+res, err := webpayplus.Create("buy_order", "session_id", "amount", "http://return-url.com")
 res, err := webpayplus.Commit("token")
 res, err := webpayplus.Status("token")
 res, err := webpayplus.Refund("token", "amount")
@@ -78,7 +78,7 @@ details := webpay.[]MallDetail{
         BuyOrder: "ordenCompraDetalle4321",
     },
 }
-res, err := webpayplus.Create("buy_order", "session_id", "http://url-de-retorno.cl", details)
+res, err := webpayplus.Create("buy_order", "session_id", "http://return-url.com", details)
 res, err := webpayplus.Commit("token")
 res, err := webpayplus.Status("token")
 res, err := webpayplus.Refund("token", "buy_order", "amount", "child_commerce_code")
