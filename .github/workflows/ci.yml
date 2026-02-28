@@ -1,0 +1,23 @@
+name: Go Test Suite
+
+on:
+  push:
+    branches: [main]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.26','1.25','1.24']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version}}
+      - name: Run tests
+        run: go test -v ./...
