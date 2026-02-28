@@ -30,8 +30,10 @@ Tambien puede usar el comando go get a traves de la terminal
 go get -u github.com/ppastene/transbank-sdk-go
 ```
 ## Primeros pasos
-Declare la funcion del servicio que quiera usar junto con las credenciales
+Declare las variables de su ambiente de Transbank en un struct webpay.Options{} y paselo como argumento en el servicio que quiera utilizar
 ```go
+import webpay "github.com/ppastene/transbank-sdk-go"
+
 options := &webpay.Options{
     ApiKey: "su api key",
     CommerceCode: "su codigo de comercio",
@@ -39,7 +41,7 @@ options := &webpay.Options{
 }
 tx := webpay.NewTransaction(options)
 ```
-Con eso ya puede usar los metodos del servicio indicado por la [documentación de Transbank](https://www.transbankdevelopers.cl/documentacion/como_empezar)
+Con eso ya puede usar los metodos del servicio indicado por la [documentación de Transbank](https://www.transbankdevelopers.cl/documentacion/como_empezar).
 ## Uso
 ### Webpay Plus
 ```go
@@ -128,8 +130,8 @@ El SDK posee un cliente HTTP para la comunicación con la API de Transbank. Pued
 
 Estos son los servicios de los cuales puede inyectar un cliente HTTP
 ```go
-func NewTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options)
-func NewMallTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options)
+NewTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // Para Webpay Plus
+NewMallTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // Para Webpay Plus Mall
 ```
 La interface contiene el siguiente metodo
 ```go
