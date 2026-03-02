@@ -31,11 +31,12 @@ func NewMallTransaction(client shared.HTTPClientInterface, options *shared.Optio
 }
 
 func (m *MallTransaction) Create(buyOrder, sessionId, returnUrl string, details []MallDetails) (*MallTransactionCreateResponse, error) {
-	payload := MallTransactionCreateRequest{
-		BuyOrder:  buyOrder,
-		SessionId: sessionId,
-		ReturnUrl: returnUrl,
-		Details:   details,
+
+	payload := map[string]any{
+		"buy_order":  buyOrder,
+		"session_id": sessionId,
+		"return_url": returnUrl,
+		"details":    details,
 	}
 
 	var response MallTransactionCreateResponse
@@ -73,10 +74,11 @@ func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, 
 }
 
 func (m *MallTransaction) Refund(token, buyOrder, childCommerceCode string, amount float64) (*MallTransactionRefundResponse, error) {
-	payload := MallTransactionRefundRequest{
-		BuyOrder:     buyOrder,
-		CommerceCode: childCommerceCode,
-		Amout:        amount,
+
+	payload := map[string]any{
+		"buy_order":     buyOrder,
+		"commerce_code": childCommerceCode,
+		"amount":        amount,
 	}
 
 	var response MallTransactionRefundResponse
@@ -90,11 +92,12 @@ func (m *MallTransaction) Refund(token, buyOrder, childCommerceCode string, amou
 }
 
 func (m *MallTransaction) Capture(childCommerceCode, token, buyOrder, authorizationCode string, captureAmount float64) (*MallTransactionCaptureResponse, error) {
-	payload := MallTransactionCaptureRequest{
-		BuyOrder:          buyOrder,
-		CommerceCode:      childCommerceCode,
-		AuthorizationCode: authorizationCode,
-		CaptureAmount:     captureAmount,
+
+	payload := map[string]any{
+		"buy_order":          buyOrder,
+		"commerce_code":      childCommerceCode,
+		"authorization_code": authorizationCode,
+		"capture_amount":     captureAmount,
 	}
 
 	var response MallTransactionCaptureResponse
