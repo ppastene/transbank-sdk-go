@@ -33,11 +33,11 @@ func (t *Transaction) Create(buyOrder, sessionId string, amount float64, returnU
 	if err := shared.HasTextWithMaxLength(returnUrl, 256, "returnUrl"); err != nil {
 		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
 	}
-	payload := TransactionCreateRequest{
-		BuyOrder:  buyOrder,
-		SessionId: sessionId,
-		Amount:    amount,
-		ReturnUrl: returnUrl,
+	payload := map[string]any{
+		"buy_order":  buyOrder,
+		"session_id": sessionId,
+		"amount":     amount,
+		"return_url": returnUrl,
 	}
 	var response TransactionCreateResponse
 	_, err := t.requestor.Do("POST", "/rswebpaytransaction/api/webpay/v1.2/transactions", payload, &response)
@@ -80,8 +80,8 @@ func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundRe
 		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
 	}
 
-	payload := TransactionRefundRequest{
-		Amount: amount,
+	payload := map[string]float64{
+		"amount": amount,
 	}
 
 	var response TransactionRefundResponse
@@ -104,10 +104,11 @@ func (t *Transaction) Capture(token, buyOrder, authorizationCode string, capture
 	if err := shared.HasTextWithMaxLength(authorizationCode, 6, "authorizationCode"); err != nil {
 		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
 	}
-	payload := TransactionCaptureRequest{
-		BuyOrder:          buyOrder,
-		AuthorizationCode: authorizationCode,
-		CaptureAmount:     captureAmount,
+
+	payload := map[string]any{
+		"buy_order":          buyOrder,
+		"authorization_code": authorizationCode,
+		"capture_amount":     captureAmount,
 	}
 
 	var response TransactionCaptureResponse
