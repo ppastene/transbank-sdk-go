@@ -84,7 +84,7 @@ res, err := webpayplus.Create("buy_order", "session_id", "http://url-de-retorno.
 res, err := webpayplus.Commit("token")
 res, err := webpayplus.Status("token")
 res, err := webpayplus.Refund("token", "buy_order", "amount", "child_commerce_code")
-res, err := webpayplus.Capture("token", "child_commerce_code", "orden_compra", "authorization_code", "amount") // Solo en ambientes con opción diferido
+res, err := webpayplus.Capture("token", "child_commerce_code", "buy_order", "authorization_code", "amount") // Solo en ambientes con opción diferido
 ```
 ### Manejo de errores
 Transbank SDK Go maneja un struct para todos los errores que puedan haber
