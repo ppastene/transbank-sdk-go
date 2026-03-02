@@ -143,9 +143,9 @@ The parameters are:
 - method: The HTTP method. Must be written uppercase
 - url: The url to call
 - headers: The request hearders
-- payload: The request payload. Must be capable to be converted o JSON using json.Marshal(). It can be empty.
+- payload: The request payload. Must be capable to be converted to JSON using json.Marshal(). It can be empty.
 
-Las respuestas que devuelve el metodo son:
+The responses returned by the interface are:
 - []byte: The URL raw response.
 - int: The HTTP code of the response
 - error: The error in case of problems with the DNS, hostname, communication, unmarshalling
