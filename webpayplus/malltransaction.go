@@ -97,7 +97,7 @@ func (m *MallTransaction) Refund(token, buyOrder, childCommerceCode string, amou
 	return &response, nil
 }
 
-func (m *MallTransaction) Capture(childCommerceCode, token, buyOrder, authorizationCode string, captureAmount float64) (*MallTransactionCaptureResponse, error) {
+func (m *MallTransaction) Capture(token, childCommerceCode, buyOrder, authorizationCode string, captureAmount float64) (*MallTransactionCaptureResponse, error) {
 	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
 		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
 	}
