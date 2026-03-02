@@ -40,11 +40,8 @@ func (m *MallTransaction) Create(buyOrder, sessionId, returnUrl string, details 
 
 	var response MallTransactionCreateResponse
 
-	code, err := m.requestor.Do("POST", "/rswebpaytransaction/api/webpay/v1.2/transactions", payload, &response)
+	_, err := m.requestor.Do("POST", "/rswebpaytransaction/api/webpay/v1.2/transactions", payload, &response)
 	if err != nil {
-		if code >= 0 {
-			return nil, NewMallTransactionCreateException(err.Error(), code)
-		}
 		return nil, err
 	}
 	return &response, nil
@@ -56,11 +53,8 @@ func (m *MallTransaction) Commit(token string) (*MallTransactionCommitResponse, 
 	}
 
 	var response MallTransactionCommitResponse
-	code, err := m.requestor.Do("PUT", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s", token), nil, &response)
+	_, err := m.requestor.Do("PUT", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s", token), nil, &response)
 	if err != nil {
-		if code >= 0 {
-			return nil, NewMallTransactionCommitException(err.Error(), code)
-		}
 		return nil, err
 	}
 
@@ -70,11 +64,8 @@ func (m *MallTransaction) Commit(token string) (*MallTransactionCommitResponse, 
 func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, error) {
 	var response MallTransactionStatusResponse
 
-	code, err := m.requestor.Do("GET", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s", token), nil, &response)
+	_, err := m.requestor.Do("GET", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s", token), nil, &response)
 	if err != nil {
-		if code >= 0 {
-			return nil, NewMallTransactionStatusException(err.Error(), code)
-		}
 		return nil, err
 	}
 
@@ -90,11 +81,8 @@ func (m *MallTransaction) Refund(token, buyOrder, childCommerceCode string, amou
 
 	var response MallTransactionRefundResponse
 
-	code, err := m.requestor.Do("POST", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s/refunds", token), payload, &response)
+	_, err := m.requestor.Do("POST", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s/refunds", token), payload, &response)
 	if err != nil {
-		if code >= 0 {
-			return nil, NewMallTransactionRefundException(err.Error(), code)
-		}
 		return nil, err
 	}
 
@@ -111,11 +99,8 @@ func (m *MallTransaction) Capture(childCommerceCode, token, buyOrder, authorizat
 
 	var response MallTransactionCaptureResponse
 
-	code, err := m.requestor.Do("PUT", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s/capture", token), payload, &response)
+	_, err := m.requestor.Do("PUT", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s/capture", token), payload, &response)
 	if err != nil {
-		if code >= 0 {
-			return nil, NewMallTransactionCaptureException(err.Error(), code)
-		}
 		return nil, err
 	}
 
