@@ -1,7 +1,6 @@
 package webpayplus
 
 import (
-	"errors"
 	"fmt"
 
 	httpclient "github.com/ppastene/transbank-sdk-go/internal/httpclient"
@@ -49,8 +48,8 @@ func (m *MallTransaction) Create(buyOrder, sessionId, returnUrl string, details 
 }
 
 func (m *MallTransaction) Commit(token string) (*MallTransactionCommitResponse, error) {
-	if len(token) == 0 {
-		return nil, errors.New("Token parameter given is empty.")
+	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
+		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
 	}
 
 	var response MallTransactionCommitResponse
@@ -63,6 +62,10 @@ func (m *MallTransaction) Commit(token string) (*MallTransactionCommitResponse, 
 }
 
 func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, error) {
+	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
+		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
+	}
+
 	var response MallTransactionStatusResponse
 
 	_, err := m.requestor.Do("GET", fmt.Sprintf("/rswebpaytransaction/api/webpay/v1.2/transactions/%s", token), nil, &response)
@@ -74,6 +77,9 @@ func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, 
 }
 
 func (m *MallTransaction) Refund(token, buyOrder, childCommerceCode string, amount float64) (*MallTransactionRefundResponse, error) {
+	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
+		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
+	}
 
 	payload := map[string]any{
 		"buy_order":     buyOrder,
@@ -92,6 +98,9 @@ func (m *MallTransaction) Refund(token, buyOrder, childCommerceCode string, amou
 }
 
 func (m *MallTransaction) Capture(childCommerceCode, token, buyOrder, authorizationCode string, captureAmount float64) (*MallTransactionCaptureResponse, error) {
+	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
+		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
+	}
 
 	payload := map[string]any{
 		"buy_order":          buyOrder,
