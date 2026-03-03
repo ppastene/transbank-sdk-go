@@ -15,8 +15,13 @@ type Requestor struct {
 }
 
 func (r *Requestor) Do(method, path string, payload any, result any) (int, error) {
-	if r.Options == nil || (r.Options.ApiKey == "" && r.Options.CommerceCode == "") {
-		return -1, &WebpayError{Code: -1, ServiceMessage: "Error while requesting to Transbank:", Cause: errors.New("Missing credentials")}
+	err := r.Options.Validate()
+	if err != nil {
+		return -1, &WebpayError{
+			Code:           -1,
+			ServiceMessage: "SDK Error",
+			Cause:          err,
+		}
 	}
 
 	fullUrl := r.Options.GetBaseUrl() + path
