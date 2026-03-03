@@ -49,7 +49,7 @@ func (m *MallTransaction) Create(buyOrder, sessionId, returnUrl string, details 
 
 func (m *MallTransaction) Commit(token string) (*MallTransactionCommitResponse, error) {
 	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
+		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
 	}
 
 	var response MallTransactionCommitResponse
@@ -63,7 +63,7 @@ func (m *MallTransaction) Commit(token string) (*MallTransactionCommitResponse, 
 
 func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, error) {
 	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
+		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
 	}
 
 	var response MallTransactionStatusResponse
@@ -78,7 +78,7 @@ func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, 
 
 func (m *MallTransaction) Refund(token, buyOrder, childCommerceCode string, amount float64) (*MallTransactionRefundResponse, error) {
 	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
+		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
 	}
 
 	payload := map[string]any{
@@ -99,7 +99,7 @@ func (m *MallTransaction) Refund(token, buyOrder, childCommerceCode string, amou
 
 func (m *MallTransaction) Capture(token, childCommerceCode, buyOrder, authorizationCode string, captureAmount float64) (*MallTransactionCaptureResponse, error) {
 	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Validation Error", Cause: err}
+		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
 	}
 
 	payload := map[string]any{

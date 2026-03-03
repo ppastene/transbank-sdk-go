@@ -12,7 +12,7 @@ var validTbkRegex = regexp.MustCompile(`^[a-zA-Z0-9|_=&%.,~:/?[+!@()>\-. ]*$`)
 
 func IsTextEmpty(value, fieldName string) error {
 	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("'%s' cannot be empty", fieldName)
+		return fmt.Errorf("%s cannot be empty", fieldName)
 	}
 	return nil
 }
@@ -22,7 +22,7 @@ func HasTextWithMaxLength(value string, length int, fieldName string) error {
 		return err
 	}
 	if len(value) > length {
-		return fmt.Errorf("'%s' is too long, the maximum length is %d", fieldName, length)
+		return fmt.Errorf("%s is too long, the maximum length is %d", fieldName, length)
 	}
 	return nil
 }

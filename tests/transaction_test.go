@@ -11,7 +11,7 @@ import (
 
 var transaction *webpay.Transaction
 
-var options = &webpay.Options{
+var transactionOptions = &webpay.Options{
 	ApiKey:       "api-key",
 	CommerceCode: "commerce-code",
 }
@@ -27,54 +27,54 @@ func TestTransactionCreate_InputError(t *testing.T) {
 	}{
 		// BuyOrder errors
 		{
-			name:          "BuyOrder exceedes maximum length",
+			name:          "buy_order exceedes maximum length",
 			buyOrder:      strings.Repeat("a", 27),
 			sessionId:     "S1",
 			amount:        10000,
 			returnUrl:     "http://test.com",
-			expectedError: "SDK Validation Error: 'buyOrder' is too long, the maximum length is 26",
+			expectedError: "SDK Error: buy_order is too long, the maximum length is 26",
 		},
 		{
-			name:          "BuyOrder is empty",
+			name:          "buy_order is empty",
 			buyOrder:      "",
 			sessionId:     "S1",
 			amount:        10000,
 			returnUrl:     "http://test.com",
-			expectedError: "SDK Validation Error: 'buyOrder' cannot be empty",
+			expectedError: "SDK Error: buy_order cannot be empty",
 		},
 		// SessionId errors
 		{
-			name:          "SessionId exceedes maximum length",
+			name:          "session_id exceedes maximum length",
 			buyOrder:      "OC123",
 			sessionId:     strings.Repeat("a", 62),
 			amount:        10000,
 			returnUrl:     "http://test.com",
-			expectedError: "SDK Validation Error: 'sessionId' is too long, the maximum length is 61",
+			expectedError: "SDK Error: session_id is too long, the maximum length is 61",
 		},
 		{
-			name:          "SessionId is empty",
+			name:          "session_id is empty",
 			buyOrder:      "OC123",
 			sessionId:     "",
 			amount:        10000,
 			returnUrl:     "http://test.com",
-			expectedError: "SDK Validation Error: 'sessionId' cannot be empty",
+			expectedError: "SDK Error: session_id cannot be empty",
 		},
 		// ReturnUrl errors
 		{
-			name:          "ReturnUrl is empty",
+			name:          "return_url is empty",
 			buyOrder:      "OC123",
 			sessionId:     "S1",
 			amount:        10000,
 			returnUrl:     "",
-			expectedError: "SDK Validation Error: 'returnUrl' cannot be empty",
+			expectedError: "SDK Error: return_url cannot be empty",
 		},
 		{
-			name:          "ReturnUrl exceedes maximum length",
+			name:          "return_url exceedes maximum length",
 			buyOrder:      "OC123",
 			sessionId:     "S1",
 			amount:        10000,
 			returnUrl:     "https://example.com/?" + strings.Repeat("a", 236),
-			expectedError: "SDK Validation Error: 'returnUrl' is too long, the maximum length is 256",
+			expectedError: "SDK Error: return_url is too long, the maximum length is 256",
 		},
 	}
 	for _, tt := range tests {
@@ -104,7 +104,7 @@ func TestTransactionCreate_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 	tests := []struct {
 		name           string
 		amount         int
@@ -177,9 +177,9 @@ func TestTransactionCreate_Success(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 
-	res, err := tx.Create("orden123", "sesion456", 15000, "https://mi-sitio.cl/return")
+	res, err := tx.Create("orden123", "session456", 15000, "https://mi-sitio.cl/return")
 
 	if err != nil {
 		t.Fatalf("No se esperaba error, se obtuvo: %v", err)
@@ -199,12 +199,12 @@ func TestTransactionStatus_InputError(t *testing.T) {
 		{
 			name:          "Token exceedes maximum length",
 			token:         strings.Repeat("a", 65),
-			expectedError: "SDK Validation Error: 'token' is too long, the maximum length is 64",
+			expectedError: "SDK Error: token is too long, the maximum length is 64",
 		},
 		{
 			name:          "Token is empty",
 			token:         "",
-			expectedError: "SDK Validation Error: 'token' cannot be empty",
+			expectedError: "SDK Error: token cannot be empty",
 		},
 	}
 	for _, tt := range tests {
@@ -234,7 +234,7 @@ func TestTransactionStatus_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 
 	tests := []struct {
 		name           string
@@ -298,7 +298,7 @@ func TestTransactionStatus_Init(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 	res, err := tx.Status(strings.Repeat("a", 64))
 	if err != nil {
 		t.Fatalf("Error al obtener status: %v", err)
@@ -345,7 +345,7 @@ func TestTransactionStatus_Failed(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 
 	res, err := tx.Status(strings.Repeat("a", 64))
 
@@ -397,7 +397,7 @@ func TestTransactionStatus_Reversed(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 
 	res, err := tx.Status(strings.Repeat("a", 64))
 
@@ -449,7 +449,7 @@ func TestTransactionStatus_Success(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 
 	res, err := tx.Status(strings.Repeat("a", 64))
 
@@ -489,7 +489,7 @@ func TestTRansactionRefund_InputError(t *testing.T) {
 			name:          "Token is empty",
 			token:         "",
 			amount:        10000,
-			expectedError: "SDK Validation Error: 'token' cannot be empty",
+			expectedError: "SDK Error: token cannot be empty",
 		},
 	}
 	for _, tt := range tests {
@@ -519,7 +519,7 @@ func TestTRansactionRefund_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 	tests := []struct {
 		name           string
 		token          string
@@ -605,7 +605,7 @@ func TestTRansactionRefund_ReverseSuccess(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 
 	ms.Response = map[string]any{
 		"type": "REVERSED",
@@ -623,11 +623,11 @@ func TestTRansactionRefund_ReverseSuccess(t *testing.T) {
 	}
 }
 
-func TestTRansactionRefund_NullifiedSuccess(t *testing.T) {
+func TestTransactionRefund_NullifiedSuccess(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, options)
+	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
 
 	ms.Response = map[string]any{
 		"type":               "NULLIFIED",
