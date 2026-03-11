@@ -13,6 +13,7 @@ Library to connect with the Transbank API written in the Go language
 - [Examples](#examples)
     - [HTTP Client injection](#http-client-injection)
         - [Example using Resty client](#example-using-resty-client)
+- [Implementation Example](#implementation-example)
 - [Roadmap](#roadmap)
 ## Requirements
 - Go 1.21.0
@@ -183,5 +184,7 @@ func main() {
 	fmt.Println(resp)
 }
 ```
+### Implementation Example
+In [this repository](https://github.com/ppastene/transbank-sdk-go-example) you will find an implementation example of the SDK using Goravel. Follow the README instructions and the [Goravel documentation](https://www.goravel.dev/getting-started/installation.html) for further information.
 ## Roadmap
 To see what is yet to implement check the [TODO.md](./TODO.md) file.
