@@ -52,9 +52,6 @@ options := &webpay.Options{
     Environment: webpay.IntegrationURL,
 }
 webpayplus := webpay.NewTransaction(options)
-details := []webpay.MallDetail{
-
-}
 res, err := webpayplus.Create("buy_order", "session_id", "amount", "http://return-url.com")
 res, err := webpayplus.Commit("token")
 res, err := webpayplus.Status("token")

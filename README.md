@@ -51,10 +51,6 @@ options := &webpay.Options{
     CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
     Environment: webpay.IntegrationURL,
 }
-webpayplus := webpay.NewTransaction(options)
-details := []webpay.MallDetail{
-
-}
 res, err := webpayplus.Create("buy_order", "session_id", "amount", "http://url-de-retorno.cl")
 res, err := webpayplus.Commit("token")
 res, err := webpayplus.Status("token")
