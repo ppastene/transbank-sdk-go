@@ -88,6 +88,47 @@ res, err := mallTransaction.Status("token")
 res, err := mallTransaction.Refund("token", "buy_order", "amount", "child_commerce_code")
 res, err := mallTransaction.Capture("token", "child_commerce_code", "buy_order", "authorization_code", "amount") // Solo en ambientes con opción diferido
 ```
+### Oneclick
+```go
+import "github.com/ppastene/transbank-sdk-go"
+
+inscriptionOptions := &transbank.Options{
+    ApiKey: "597055555532",
+    CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
+    Environment: transbank.IntegrationURL,
+}
+oneclickInscrpition := transbank.NewOneclickMallInscription(inscriptionOptions)
+res, err := oneclickInscrpition.Start("user", "email", "http://url-de-retorno.cl")
+res, err := oneclickInscrpition.Finish("token")
+res, err := oneclickInscription.Delete("token", "user")
+
+transactionOptions := &transbank.Options{
+    ApiKey: "597055555532",
+    CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
+    Environment: transbank.IntegrationURL,
+}
+
+details := transbank.[]OneclickMallDetails{
+    {
+        CommerceCode: "commerceCodeStoreOne",
+	    BuyOrder: "ordenCompraDetalle1234",
+	    Amount: 10000,
+	    InstallmentsNumber 0,
+    },
+    {
+        CommerceCode: "commerceCodeStoreTwo",
+	    BuyOrder: "ordenCompraDetalle4321",
+	    Amount: 10000,
+	    InstallmentsNumber 0,
+    },
+}
+
+oneclickTransaction := transbank.NewOneclickMallTransaction(transactionOptions)
+res, err := oneclickTransaction.Authorize("username", "token", "buy_order", details)
+res, err := oneclickTransaction.Status("buy_order")
+res, err := oneclickTransaction.Refund("buy_order", "child_commerce_code", "child_buy_order", "amount")
+res, err := oneclickTransaction.Capture("buy_order", "commerce_code", "authorization_code", "amount") // Solo en ambientes con opción diferido
+```
 ### Manejo de errores
 Transbank SDK Go maneja un struct para todos los errores que puedan haber
 ```go
@@ -148,6 +189,8 @@ Estos son los servicios de los cuales puede inyectar un cliente HTTP
 ```go
 NewTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // Para Webpay Plus
 NewMallTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // Para Webpay Plus Mall
+NewOneclickMallInscriptionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // Para inscrpitiones con Oneclick
+NewOneclickMallTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // Para transacciones con Oneclick
 ```
 La interface contiene el siguiente metodo
 ```go
