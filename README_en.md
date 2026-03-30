@@ -31,27 +31,30 @@ Also you can use the go get command in the terminal
 go get -u github.com/ppastene/transbank-sdk-go
 ```
 ## First steps
-Declare the variables of your Transbank environment in the webpay.Options{} struct, and pass it as an argumento on the service you wanna use
+Declare the variables of your Transbank environment in the transbank.Options{} struct, and pass it as an argumento on the service you wanna use
 ```go
 import webpay "github.com/ppastene/transbank-sdk-go"
 
-options := &webpay.Options{
+options := &transbank.Options{
     ApiKey: "the api key",
     CommerceCode: "the commerce code",
-    Environment: webpay.IntegrationURL, //Options: webpay.IntegrationURL for integration environment, webpay.ProductionURL for production environment.
+    Environment: transbank.IntegrationURL, //Options: transbank.IntegrationURL for integration environment, transbank.ProductionURL for production environment.
 }
-tx := webpay.NewTransaction(options)
+tx := transbank.NewTransaction(options)
 ```
 With that you can use the service methods displayed on the [official Transbank documentation](https://www.transbankdevelopers.cl/documentacion/como_empezar)
 ## Use
 ### Webpay Plus
 ```go
-options := &webpay.Options{
+import webpay "github.com/ppastene/transbank-sdk-go"
+
+options := &transbank.Options{
     ApiKey: "597055555532",
     CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
-    Environment: webpay.IntegrationURL,
+    Environment: transbank.IntegrationURL,
 }
-transaction := webpay.NewTransaction(options)
+
+transaction := transbank.NewTransaction(options)
 res, err := transaction.Create("buy_order", "session_id", "amount", "http://return-url.com")
 res, err := transaction.Commit("token")
 res, err := transaction.Status("token")
@@ -60,13 +63,15 @@ res, err := transaction.Capture("token", "buy_order", "authorization_code", "amo
 ```
 ### Webpay Plus Mall
 ```go
-options := &webpay.Options{
+import webpay "github.com/ppastene/transbank-sdk-go"
+
+options := &transbank.Options{
     ApiKey: "597055555532",
     CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
-    Environment: webpay.IntegrationURL,
+    Environment: transbank.IntegrationURL,
 }
-mallTransaction := webpay.NewMallTransaction(options)
-details := webpay.[]WebpayPlusMallDetails{
+mallTransaction := transbank.NewMallTransaction(options)
+details := transbank.[]WebpayPlusMallDetails{
     {
         Amount: 10000,
         CommerceCode: "commerceCodeStoreOne",
@@ -102,12 +107,12 @@ type WebpayError struct {
 
 If you print the error it will use the Error() method which will return a string of ServiceMessage + Cause
 ```go
-options := &webpay.Options{
+options := &transbank.Options{
     ApiKey: "the api key",
     CommerceCode: "the commerce code",
-    Environment: webpay.IntegrationURL,
+    Environment: transbank.IntegrationURL,
 }
-transaction := webpay.NewTransaction(options)
+transaction := transbank.NewTransaction(options)
 
 res, err := transaction.Status("")
 if err != nil {
@@ -120,12 +125,12 @@ if err != nil {
 ```
 You can use errors.Unwrap(err) to get the error directly
 ```go
-options := &webpay.Options{
+options := &transbank.Options{
     ApiKey: "the api key",
     CommerceCode: "the commerce code",
-    Environment: webpay.IntegrationURL,
+    Environment: transbank.IntegrationURL,
 }
-transaction := webpay.NewTransaction(options)
+transaction := transbank.NewTransaction(options)
 
 res, err := transaction.Status("non-registered-token")
 if err != nil {
@@ -182,12 +187,12 @@ func (c *RestyClient) Request(method string, url string, headers map[string]stri
 
 func main() {
 	client := &RestyClient{resty.New()}
-	options := &webpay.Options{
+	options := &transbank.Options{
 		ApiKey:       "597055555532",
 		CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
-		Environment:  webpay.IntegrationURL,
+		Environment:  transbank.IntegrationURL,
 	}
-	tx := webpay.WebpayPlusTransactionWithClient(client, options)
+	tx := transbank.NewTransactionWithClient(client, options)
 	resp, err := tx.Status("token")
 	if err != nil {
 		fmt.Println(err)
