@@ -31,27 +31,30 @@ Also you can use the go get command in the terminal
 go get -u github.com/ppastene/transbank-sdk-go
 ```
 ## First steps
-Declare the variables of your Transbank environment in the webpay.Options{} struct, and pass it as an argumento on the service you wanna use
+Declare the variables of your Transbank environment in the transbank.Options{} struct, and pass it as an argumento on the service you wanna use
 ```go
 import webpay "github.com/ppastene/transbank-sdk-go"
 
-options := &webpay.Options{
+options := &transbank.Options{
     ApiKey: "the api key",
     CommerceCode: "the commerce code",
-    Environment: webpay.IntegrationURL, //Options: webpay.IntegrationURL for integration environment, webpay.ProductionURL for production environment.
+    Environment: transbank.IntegrationURL, //Options: transbank.IntegrationURL for integration environment, transbank.ProductionURL for production environment.
 }
-tx := webpay.NewTransaction(options)
+tx := transbank.NewTransaction(options)
 ```
 With that you can use the service methods displayed on the [official Transbank documentation](https://www.transbankdevelopers.cl/documentacion/como_empezar)
 ## Use
 ### Webpay Plus
 ```go
-options := &webpay.Options{
+import webpay "github.com/ppastene/transbank-sdk-go"
+
+options := &transbank.Options{
     ApiKey: "597055555532",
     CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
-    Environment: webpay.IntegrationURL,
+    Environment: transbank.IntegrationURL,
 }
-transaction := webpay.NewTransaction(options)
+
+transaction := transbank.NewTransaction(options)
 res, err := transaction.Create("buy_order", "session_id", "amount", "http://return-url.com")
 res, err := transaction.Commit("token")
 res, err := transaction.Status("token")
@@ -60,13 +63,15 @@ res, err := transaction.Capture("token", "buy_order", "authorization_code", "amo
 ```
 ### Webpay Plus Mall
 ```go
-options := &webpay.Options{
+import webpay "github.com/ppastene/transbank-sdk-go"
+
+options := &transbank.Options{
     ApiKey: "597055555532",
     CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
-    Environment: webpay.IntegrationURL,
+    Environment: transbank.IntegrationURL,
 }
-mallTransaction := webpay.NewMallTransaction(options)
-details := webpay.[]WebpayPlusMallDetails{
+mallTransaction := transbank.NewMallTransaction(options)
+details := transbank.[]WebpayPlusMallDetails{
     {
         Amount: 10000,
         CommerceCode: "commerceCodeStoreOne",
@@ -83,6 +88,47 @@ res, err := mallTransaction.Commit("token")
 res, err := mallTransaction.Status("token")
 res, err := mallTransaction.Refund("token", "buy_order", "amount", "child_commerce_code")
 res, err := mallTransaction.Capture("token", "child_commerce_code", "buy_order", "authorization_code", "amount") // Only in environments with differ option
+```
+### Oneclick
+```go
+import "github.com/ppastene/transbank-sdk-go"
+
+inscriptionOptions := &transbank.Options{
+    ApiKey: "597055555532",
+    CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
+    Environment: transbank.IntegrationURL,
+}
+oneclickInscrpition := transbank.NewOneclickMallInscription(inscriptionOptions)
+res, err := oneclickInscrpition.Start("user", "email", "http://return-url.com")
+res, err := oneclickInscrpition.Finish("token")
+res, err := oneclickInscription.Delete("token", "user")
+
+transactionOptions := &transbank.Options{
+    ApiKey: "597055555532",
+    CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
+    Environment: transbank.IntegrationURL,
+}
+
+details := transbank.[]OneclickMallDetails{
+    {
+        CommerceCode: "commerceCodeStoreOne",
+	    BuyOrder: "ordenCompraDetalle1234",
+	    Amount: 10000,
+	    InstallmentsNumber 0,
+    },
+    {
+        CommerceCode: "commerceCodeStoreTwo",
+	    BuyOrder: "ordenCompraDetalle4321",
+	    Amount: 10000,
+	    InstallmentsNumber 0,
+    },
+}
+
+oneclickTransaction := transbank.NewOneclickMallTransaction(transactionOptions)
+res, err := oneclickTransaction.Authorize("username", "token", "buy_order", details)
+res, err := oneclickTransaction.Status("buy_order")
+res, err := oneclickTransaction.Refund("buy_order", "child_commerce_code", "child_buy_order", "amount")
+res, err := oneclickTransaction.Capture("buy_order", "commerce_code", "authorization_code", "amount") // Only in environments with differ option
 ```
 ### Error management
 Transbank SDK Go uses a struct to manage all the errors encountered
@@ -102,12 +148,12 @@ type WebpayError struct {
 
 If you print the error it will use the Error() method which will return a string of ServiceMessage + Cause
 ```go
-options := &webpay.Options{
+options := &transbank.Options{
     ApiKey: "the api key",
     CommerceCode: "the commerce code",
-    Environment: webpay.IntegrationURL,
+    Environment: transbank.IntegrationURL,
 }
-transaction := webpay.NewTransaction(options)
+transaction := transbank.NewTransaction(options)
 
 res, err := transaction.Status("")
 if err != nil {
@@ -120,12 +166,12 @@ if err != nil {
 ```
 You can use errors.Unwrap(err) to get the error directly
 ```go
-options := &webpay.Options{
+options := &transbank.Options{
     ApiKey: "the api key",
     CommerceCode: "the commerce code",
-    Environment: webpay.IntegrationURL,
+    Environment: transbank.IntegrationURL,
 }
-transaction := webpay.NewTransaction(options)
+transaction := transbank.NewTransaction(options)
 
 res, err := transaction.Status("non-registered-token")
 if err != nil {
@@ -144,6 +190,8 @@ These are the functions of the services you can inject a HTTP client
 ```go
 NewTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // For Webpay Plus
 NewMallTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // For Webpay Plus Mall
+NewOneclickMallInscriptionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // For Oneclick Inscripions
+NewOneclickMallTransactionWithClient(client shared.HTTPClientInterface, opt *shared.Options) // For Oneclick Transactions
 ```
 The interface contains the following methhod
 ```go
@@ -182,12 +230,12 @@ func (c *RestyClient) Request(method string, url string, headers map[string]stri
 
 func main() {
 	client := &RestyClient{resty.New()}
-	options := &webpay.Options{
+	options := &transbank.Options{
 		ApiKey:       "597055555532",
 		CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
-		Environment:  webpay.IntegrationURL,
+		Environment:  transbank.IntegrationURL,
 	}
-	tx := webpay.WebpayPlusTransactionWithClient(client, options)
+	tx := transbank.NewTransactionWithClient(client, options)
 	resp, err := tx.Status("token")
 	if err != nil {
 		fmt.Println(err)

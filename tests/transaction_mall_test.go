@@ -5,16 +5,16 @@ import (
 	"strings"
 	"testing"
 
-	webpay "github.com/ppastene/transbank-sdk-go"
+	"github.com/ppastene/transbank-sdk-go"
 	"github.com/ppastene/transbank-sdk-go/internal/shared"
 )
 
-var mallTransactionOptions = &webpay.Options{
+var mallTransactionOptions = &transbank.Options{
 	ApiKey:       "api-key",
 	CommerceCode: "commerce-code",
 }
 
-var validMallDetails = webpay.WebpayPlusMallDetails{
+var validMallDetails = transbank.WebpayPlusMallDetails{
 	Amount:       10000,
 	CommerceCode: "597055555536",
 	BuyOrder:     "m1-123456",
@@ -25,29 +25,29 @@ func TestMallTransaction_InitWithoutCredentials(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		options       *webpay.Options
+		options       *transbank.Options
 		expectedError string
 	}{
 		{
 			name:          "Credentials missing",
-			options:       &webpay.Options{},
+			options:       &transbank.Options{},
 			expectedError: "No credentials",
 		},
 		{
 			name:          "No Api Key",
-			options:       &webpay.Options{CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C"},
+			options:       &transbank.Options{CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C"},
 			expectedError: "ApiKey is required",
 		},
 		{
 			name:          "No Commerce Code",
-			options:       &webpay.Options{ApiKey: "597055555540"},
+			options:       &transbank.Options{ApiKey: "597055555540"},
 			expectedError: "CommerceCode is required",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tx := webpay.NewMallTransactionWithClient(mockClient, tt.options)
+			tx := transbank.NewMallTransactionWithClient(mockClient, tt.options)
 
 			_, err := tx.Status("token")
 			if err == nil {
@@ -71,13 +71,13 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
+	tx := transbank.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
 	tests := []struct {
 		name           string
 		buyOrder       string
 		sessionId      string
 		returnUrl      string
-		details        []webpay.WebpayPlusMallDetails
+		details        []transbank.WebpayPlusMallDetails
 		mockStatusCode int
 		mockResponse   map[string]string
 		expectedError  string
@@ -87,7 +87,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "",
 			sessionId:      "session123456",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
+			details:        []transbank.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "buy_order is required!"},
 			mockStatusCode: 422,
 			expectedError:  "buy_order is required!",
@@ -97,7 +97,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456àèìòù",
 			sessionId:      "session123456",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
+			details:        []transbank.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "\"Buy order\" rejected with value p-123456àèìòù"},
 			mockStatusCode: 422,
 			expectedError:  "\"Buy order\" rejected with value p-123456àèìòù",
@@ -107,7 +107,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       strings.Repeat("a", 27),
 			sessionId:      "session123456",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
+			details:        []transbank.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: buy_order"},
 			mockStatusCode: 422,
 			expectedError:  "Invalid value for parameter: buy_order",
@@ -117,7 +117,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      "",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
+			details:        []transbank.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "session_id is required!"},
 			mockStatusCode: 422,
 			expectedError:  "session_id is required!",
@@ -127,7 +127,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      strings.Repeat("a", 62),
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
+			details:        []transbank.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: session_id"},
 			mockStatusCode: 422,
 			expectedError:  "Invalid value for parameter: session_id",
@@ -137,7 +137,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      "session123456",
 			returnUrl:      "",
-			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
+			details:        []transbank.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "return_url is required!"},
 			mockStatusCode: 422,
 			expectedError:  "return_url is required!",
@@ -147,7 +147,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      "session123456",
 			returnUrl:      strings.Repeat("a", 256),
-			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
+			details:        []transbank.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: return_url"},
 			mockStatusCode: 422,
 			expectedError:  "Invalid value for parameter: return_url",
@@ -157,7 +157,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      "session123456",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.WebpayPlusMallDetails{},
+			details:        []transbank.WebpayPlusMallDetails{},
 			mockResponse:   map[string]string{"error_message": "at least one detail is required"},
 			mockStatusCode: 422,
 			expectedError:  "at least one detail is required",
@@ -167,7 +167,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.WebpayPlusMallDetails{
+			details: []transbank.WebpayPlusMallDetails{
 				{
 					Amount:       0,
 					CommerceCode: "597055555536",
@@ -183,7 +183,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.WebpayPlusMallDetails{
+			details: []transbank.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: "",
@@ -199,7 +199,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.WebpayPlusMallDetails{
+			details: []transbank.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: strings.Repeat("a", 13),
@@ -215,7 +215,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.WebpayPlusMallDetails{
+			details: []transbank.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: strings.Repeat("1", 12),
@@ -231,7 +231,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.WebpayPlusMallDetails{
+			details: []transbank.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: "597055555536",
@@ -247,7 +247,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.WebpayPlusMallDetails{
+			details: []transbank.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: "597055555536",
@@ -263,7 +263,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.WebpayPlusMallDetails{
+			details: []transbank.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: "597055555536",
@@ -311,8 +311,8 @@ func TestMallTransactionCreate_Success(t *testing.T) {
 	}
 	ms.StatusCode = 200
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
-	res, err := tx.Create("p-123456", "session123456", "https://webpay.cl/formulario-pago", []webpay.WebpayPlusMallDetails{validMallDetails})
+	tx := transbank.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
+	res, err := tx.Create("p-123456", "session123456", "https://webpay.cl/formulario-pago", []transbank.WebpayPlusMallDetails{validMallDetails})
 	if err != nil {
 		t.Fatalf("Expected result, got: %v", err)
 	}
@@ -323,7 +323,7 @@ func TestMallTransactionCreate_Success(t *testing.T) {
 
 func TestMallTransactionStatus_InputError(t *testing.T) {
 	mockClient := &mockClient{}
-	tx := webpay.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
+	tx := transbank.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
 	tests := []struct {
 		name          string
 		token         string
@@ -367,7 +367,7 @@ func TestMallTransactionStatus_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, mallTransactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, mallTransactionOptions)
 
 	tests := []struct {
 		name           string
@@ -450,7 +450,7 @@ func TestMallTransactionStatus_Success(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
+	tx := transbank.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
 	res, err := tx.Status(strings.Repeat("a", 64))
 	if err != nil {
 		t.Fatalf("Expected result, got: %v", err)
@@ -478,7 +478,7 @@ func TestMallTransactionStatus_Success(t *testing.T) {
 
 func TestMallTransactionRefund_InputError(t *testing.T) {
 	mockClient := &mockClient{}
-	tx := webpay.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
+	tx := transbank.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
 	tests := []struct {
 		name          string
 		token         string
@@ -533,7 +533,7 @@ func TestMallTransactionRefund_ServerError(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
+	tx := transbank.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
 	tests := []struct {
 		name           string
 		token          string
@@ -660,7 +660,7 @@ func TestMallTransactionRefund_Success(t *testing.T) {
 	}
 	ms.StatusCode = 200
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
+	tx := transbank.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
 	res, err := tx.Refund("token", "buyOrder12345678", "597055555536", 10000)
 	if err != nil {
 		t.Fatalf("Expected result, got: %v", err)
@@ -683,7 +683,7 @@ func TestMallTransactionRefund_NullifiedSuccess(t *testing.T) {
 		"response_code":      0,
 	}
 	ms.StatusCode = 200
-	tx := webpay.NewMallTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewMallTransactionWithClient(mockClient, transactionOptions)
 	res, err := tx.Refund("token", "buyOrder12345678", "597055555536", 500)
 	if err != nil {
 		t.Fatalf("Expected result, got: %v", err)

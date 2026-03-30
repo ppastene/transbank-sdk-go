@@ -1,4 +1,4 @@
-package webpay
+package transbank
 
 import (
 	"github.com/ppastene/transbank-sdk-go/internal/shared"

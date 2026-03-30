@@ -5,18 +5,21 @@ import (
 	"strings"
 	"testing"
 
-	webpay "github.com/ppastene/transbank-sdk-go"
+	"github.com/ppastene/transbank-sdk-go"
 	"github.com/ppastene/transbank-sdk-go/internal/shared"
 )
 
-var transaction *webpay.WebpayPlusTransaction
-
-var transactionOptions = &webpay.Options{
+var transactionOptions = &transbank.Options{
 	ApiKey:       "api-key",
 	CommerceCode: "commerce-code",
 }
 
 func TestTransactionCreate_InputError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Server.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+
 	tests := []struct {
 		name          string
 		buyOrder      string
@@ -79,7 +82,7 @@ func TestTransactionCreate_InputError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := transaction.Create(tt.buyOrder, tt.sessionId, tt.amount, tt.returnUrl)
+			_, err := tx.Create(tt.buyOrder, tt.sessionId, tt.amount, tt.returnUrl)
 			if err == nil {
 				t.Errorf("Se esperaba error pero se obtuvo nil")
 				return
@@ -104,7 +107,7 @@ func TestTransactionCreate_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 	tests := []struct {
 		name           string
 		amount         int
@@ -177,7 +180,7 @@ func TestTransactionCreate_Success(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 
 	res, err := tx.Create("orden123", "session456", 15000, "https://mi-sitio.cl/return")
 
@@ -191,6 +194,11 @@ func TestTransactionCreate_Success(t *testing.T) {
 }
 
 func TestTransactionStatus_InputError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Server.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+
 	tests := []struct {
 		name          string
 		token         string
@@ -209,7 +217,7 @@ func TestTransactionStatus_InputError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := transaction.Status(tt.token)
+			_, err := tx.Status(tt.token)
 			if err == nil {
 				t.Errorf("Se esperaba error pero se obtuvo nil")
 				return
@@ -234,7 +242,7 @@ func TestTransactionStatus_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 
 	tests := []struct {
 		name           string
@@ -298,7 +306,7 @@ func TestTransactionStatus_Init(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 	res, err := tx.Status(strings.Repeat("a", 64))
 	if err != nil {
 		t.Fatalf("Error al obtener status: %v", err)
@@ -345,7 +353,7 @@ func TestTransactionStatus_Failed(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 
 	res, err := tx.Status(strings.Repeat("a", 64))
 
@@ -397,7 +405,7 @@ func TestTransactionStatus_Reversed(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 
 	res, err := tx.Status(strings.Repeat("a", 64))
 
@@ -449,7 +457,7 @@ func TestTransactionStatus_Success(t *testing.T) {
 	ms.StatusCode = 200
 
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 
 	res, err := tx.Status(strings.Repeat("a", 64))
 
@@ -479,6 +487,11 @@ func TestTransactionStatus_Success(t *testing.T) {
 }
 
 func TestTRansactionRefund_InputError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Server.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+
 	tests := []struct {
 		name          string
 		token         string
@@ -494,7 +507,7 @@ func TestTRansactionRefund_InputError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := transaction.Refund(tt.token, tt.amount)
+			_, err := tx.Refund(tt.token, tt.amount)
 			if err == nil {
 				t.Errorf("Se esperaba error pero se obtuvo nil")
 				return
@@ -519,7 +532,7 @@ func TestTRansactionRefund_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 	tests := []struct {
 		name           string
 		token          string
@@ -605,7 +618,7 @@ func TestTRansactionRefund_ReverseSuccess(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 
 	ms.Response = map[string]any{
 		"type": "REVERSED",
@@ -627,7 +640,7 @@ func TestTransactionRefund_NullifiedSuccess(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
-	tx := webpay.NewTransactionWithClient(mockClient, transactionOptions)
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 
 	ms.Response = map[string]any{
 		"type":               "NULLIFIED",
