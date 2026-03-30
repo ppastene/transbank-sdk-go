@@ -10,9 +10,9 @@ const (
 	IntegrationURL = shared.Test
 )
 
-type Transaction = webpayplus.Transaction
-type MallTransaction = webpayplus.MallTransaction
-type MallDetails = webpayplus.MallDetails
+type WebpayPlusTransaction = webpayplus.Transaction
+type WebpayPlusMallTransaction = webpayplus.MallTransaction
+type WebpayPlusMallDetails = webpayplus.MallDetails
 type Options = shared.Options
 
 func NewTransaction(opt *shared.Options) *Transaction {

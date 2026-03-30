@@ -51,12 +51,12 @@ options := &webpay.Options{
     CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
     Environment: webpay.IntegrationURL,
 }
-webpayplus := webpay.NewTransaction(options)
-res, err := webpayplus.Create("buy_order", "session_id", "amount", "http://return-url.com")
-res, err := webpayplus.Commit("token")
-res, err := webpayplus.Status("token")
-res, err := webpayplus.Refund("token", "amount")
-res, err := webpayplus.Capture("token", "buy_order", "authorization_code", "amount") // Only in environments with differ option
+transaction := webpay.NewTransaction(options)
+res, err := transaction.Create("buy_order", "session_id", "amount", "http://return-url.com")
+res, err := transaction.Commit("token")
+res, err := transaction.Status("token")
+res, err := transaction.Refund("token", "amount")
+res, err := transaction.Capture("token", "buy_order", "authorization_code", "amount") // Only in environments with differ option
 ```
 ### Webpay Plus Mall
 ```go
@@ -65,8 +65,8 @@ options := &webpay.Options{
     CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
     Environment: webpay.IntegrationURL,
 }
-webpayplus := webpay.NewMallTransaction(options)
-details := webpay.[]MallDetail{
+mallTransaction := webpay.NewMallTransaction(options)
+details := webpay.[]WebpayPlusMallDetails{
     {
         Amount: 10000,
         CommerceCode: "commerceCodeStoreOne",
@@ -78,11 +78,11 @@ details := webpay.[]MallDetail{
         BuyOrder: "ordenCompraDetalle4321",
     },
 }
-res, err := webpayplus.Create("buy_order", "session_id", "http://return-url.com", details)
-res, err := webpayplus.Commit("token")
-res, err := webpayplus.Status("token")
-res, err := webpayplus.Refund("token", "buy_order", "amount", "child_commerce_code")
-res, err := webpayplus.Capture("token", "child_commerce_code", "buy_order", "authorization_code", "amount") // Only in environments with differ option
+res, err := mallTransaction.Create("buy_order", "session_id", "http://return-url.com", details)
+res, err := mallTransaction.Commit("token")
+res, err := mallTransaction.Status("token")
+res, err := mallTransaction.Refund("token", "buy_order", "amount", "child_commerce_code")
+res, err := mallTransaction.Capture("token", "child_commerce_code", "buy_order", "authorization_code", "amount") // Only in environments with differ option
 ```
 ### Error management
 Transbank SDK Go uses a struct to manage all the errors encountered
@@ -102,7 +102,14 @@ type WebpayError struct {
 
 If you print the error it will use the Error() method which will return a string of ServiceMessage + Cause
 ```go
-res, err := webpayplus.Status("")
+options := &webpay.Options{
+    ApiKey: "the api key",
+    CommerceCode: "the commerce code",
+    Environment: webpay.IntegrationURL,
+}
+transaction := webpay.NewTransaction(options)
+
+res, err := transaction.Status("")
 if err != nil {
     fmt.Println(err)
 }
@@ -113,7 +120,14 @@ if err != nil {
 ```
 You can use errors.Unwrap(err) to get the error directly
 ```go
-res, err := webpayplus.Status("non-registered-token")
+options := &webpay.Options{
+    ApiKey: "the api key",
+    CommerceCode: "the commerce code",
+    Environment: webpay.IntegrationURL,
+}
+transaction := webpay.NewTransaction(options)
+
+res, err := transaction.Status("non-registered-token")
 if err != nil {
     fmt.Println(errors.Unwrap(err))
 }
@@ -173,7 +187,7 @@ func main() {
 		CommerceCode: "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
 		Environment:  webpay.IntegrationURL,
 	}
-	tx := webpay.NewTransactionWithClient(client, options)
+	tx := webpay.WebpayPlusTransactionWithClient(client, options)
 	resp, err := tx.Status("token")
 	if err != nil {
 		fmt.Println(err)

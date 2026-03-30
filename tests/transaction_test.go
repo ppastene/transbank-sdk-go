@@ -9,7 +9,7 @@ import (
 	"github.com/ppastene/transbank-sdk-go/internal/shared"
 )
 
-var transaction *webpay.Transaction
+var transaction *webpay.WebpayPlusTransaction
 
 var transactionOptions = &webpay.Options{
 	ApiKey:       "api-key",

@@ -14,7 +14,7 @@ var mallTransactionOptions = &webpay.Options{
 	CommerceCode: "commerce-code",
 }
 
-var validMallDetails = webpay.MallDetails{
+var validMallDetails = webpay.WebpayPlusMallDetails{
 	Amount:       10000,
 	CommerceCode: "597055555536",
 	BuyOrder:     "m1-123456",
@@ -77,7 +77,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 		buyOrder       string
 		sessionId      string
 		returnUrl      string
-		details        []webpay.MallDetails
+		details        []webpay.WebpayPlusMallDetails
 		mockStatusCode int
 		mockResponse   map[string]string
 		expectedError  string
@@ -87,7 +87,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "",
 			sessionId:      "session123456",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.MallDetails{validMallDetails},
+			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "buy_order is required!"},
 			mockStatusCode: 422,
 			expectedError:  "buy_order is required!",
@@ -97,7 +97,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456àèìòù",
 			sessionId:      "session123456",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.MallDetails{validMallDetails},
+			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "\"Buy order\" rejected with value p-123456àèìòù"},
 			mockStatusCode: 422,
 			expectedError:  "\"Buy order\" rejected with value p-123456àèìòù",
@@ -107,7 +107,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       strings.Repeat("a", 27),
 			sessionId:      "session123456",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.MallDetails{validMallDetails},
+			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: buy_order"},
 			mockStatusCode: 422,
 			expectedError:  "Invalid value for parameter: buy_order",
@@ -117,7 +117,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      "",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.MallDetails{validMallDetails},
+			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "session_id is required!"},
 			mockStatusCode: 422,
 			expectedError:  "session_id is required!",
@@ -127,7 +127,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      strings.Repeat("a", 62),
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.MallDetails{validMallDetails},
+			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: session_id"},
 			mockStatusCode: 422,
 			expectedError:  "Invalid value for parameter: session_id",
@@ -137,7 +137,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      "session123456",
 			returnUrl:      "",
-			details:        []webpay.MallDetails{validMallDetails},
+			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "return_url is required!"},
 			mockStatusCode: 422,
 			expectedError:  "return_url is required!",
@@ -147,7 +147,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      "session123456",
 			returnUrl:      strings.Repeat("a", 256),
-			details:        []webpay.MallDetails{validMallDetails},
+			details:        []webpay.WebpayPlusMallDetails{validMallDetails},
 			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: return_url"},
 			mockStatusCode: 422,
 			expectedError:  "Invalid value for parameter: return_url",
@@ -157,7 +157,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:       "p-123456",
 			sessionId:      "session123456",
 			returnUrl:      "https://webpay.cl/formulario-pago",
-			details:        []webpay.MallDetails{},
+			details:        []webpay.WebpayPlusMallDetails{},
 			mockResponse:   map[string]string{"error_message": "at least one detail is required"},
 			mockStatusCode: 422,
 			expectedError:  "at least one detail is required",
@@ -167,7 +167,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.MallDetails{
+			details: []webpay.WebpayPlusMallDetails{
 				{
 					Amount:       0,
 					CommerceCode: "597055555536",
@@ -183,7 +183,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.MallDetails{
+			details: []webpay.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: "",
@@ -199,7 +199,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.MallDetails{
+			details: []webpay.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: strings.Repeat("a", 13),
@@ -215,7 +215,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.MallDetails{
+			details: []webpay.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: strings.Repeat("1", 12),
@@ -231,7 +231,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.MallDetails{
+			details: []webpay.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: "597055555536",
@@ -247,7 +247,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.MallDetails{
+			details: []webpay.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: "597055555536",
@@ -263,7 +263,7 @@ func TestMallTransactionCreate_ServerError(t *testing.T) {
 			buyOrder:  "p-123456",
 			sessionId: "session123456",
 			returnUrl: "https://webpay.cl/formulario-pago",
-			details: []webpay.MallDetails{
+			details: []webpay.WebpayPlusMallDetails{
 				{
 					Amount:       10000,
 					CommerceCode: "597055555536",
@@ -312,7 +312,7 @@ func TestMallTransactionCreate_Success(t *testing.T) {
 	ms.StatusCode = 200
 	mockClient := &mockClient{ms.Server.URL}
 	tx := webpay.NewMallTransactionWithClient(mockClient, mallTransactionOptions)
-	res, err := tx.Create("p-123456", "session123456", "https://webpay.cl/formulario-pago", []webpay.MallDetails{validMallDetails})
+	res, err := tx.Create("p-123456", "session123456", "https://webpay.cl/formulario-pago", []webpay.WebpayPlusMallDetails{validMallDetails})
 	if err != nil {
 		t.Fatalf("Expected result, got: %v", err)
 	}
