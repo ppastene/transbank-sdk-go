@@ -698,3 +698,240 @@ func TestMallTransactionRefund_NullifiedSuccess(t *testing.T) {
 		t.Errorf("Wrong response_code. Expected 0, got %s", res.Type)
 	}
 }
+
+func TestMallTransactionCapture_InputError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Server.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewMallTransactionWithClient(mockClient, transactionOptions)
+
+	tests := []struct {
+		name              string
+		token             string
+		buyOrder          string
+		commerceCode      string
+		authorizationCode string
+		amount            float64
+		expectedError     string
+	}{
+		{
+			name:              "Token is empty",
+			token:             "",
+			buyOrder:          "11223344",
+			commerceCode:      "597055555582",
+			authorizationCode: "1617",
+			amount:            10000,
+			expectedError:     "token cannot be empty",
+		},
+		{
+			name:              "Token exceedes maximum length",
+			token:             strings.Repeat("a", 65),
+			buyOrder:          "123456",
+			commerceCode:      "597055555582",
+			authorizationCode: "1617",
+			amount:            10000,
+			expectedError:     "token is too long, the maximum length is 64",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tx.Capture(tt.token, tt.commerceCode, tt.buyOrder, tt.authorizationCode, tt.amount)
+			if err == nil {
+				t.Fatalf("Expected error, got nil")
+			}
+
+			cause := errors.Unwrap(err)
+
+			if cause.Error() != tt.expectedError {
+				t.Errorf("Wrong error cause.\nExpected: %q\nGot: %q)", tt.expectedError, cause.Error())
+			}
+
+			var werr *shared.WebpayError
+			if errors.As(err, &werr) {
+				if werr.Code != -1 {
+					t.Errorf("Wrong error code. Expected: -1, Got: %d", werr.Code)
+				}
+			}
+		})
+	}
+}
+
+func TestMallTransactionCapture_ServerError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Server.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewMallTransactionWithClient(mockClient, transactionOptions)
+
+	tests := []struct {
+		name              string
+		token             string
+		buyOrder          string
+		commerceCode      string
+		authorizationCode string
+		amount            float64
+		mockStatusCode    int
+		mockResponse      map[string]string
+		expectedError     string
+	}{
+		{
+			name:              "Wrong Authorization Code",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			commerceCode:      "597055555582",
+			authorizationCode: "1212",
+			amount:            10000,
+			mockStatusCode:    400,
+			mockResponse:      map[string]string{"error_message": "Transaction not found"},
+			expectedError:     "Transaction not found",
+		},
+		{
+			name:              "Wrong Buy Order",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "11223355",
+			commerceCode:      "597055555582",
+			authorizationCode: "1213",
+			amount:            10000,
+			mockStatusCode:    400,
+			mockResponse:      map[string]string{"error_message": "Transaction not found"},
+			expectedError:     "Transaction not found",
+		},
+		{
+			name:              "Wrong Commerce Code",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			commerceCode:      "1234567890",
+			authorizationCode: "1213",
+			amount:            10000,
+			mockStatusCode:    400,
+			mockResponse:      map[string]string{"error_message": "Transaction not found"},
+			expectedError:     "Transaction not found",
+		},
+		{
+			name:              "buy_order cannot be empty",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "",
+			commerceCode:      "597055555582",
+			authorizationCode: "1213",
+			amount:            10000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "buy_order is required!"},
+			expectedError:     "buy_order is required!",
+		},
+		{
+			name:              "authorization_code cannot be empty",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			commerceCode:      "597055555582",
+			authorizationCode: "",
+			amount:            10000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "authorization_code is required!"},
+			expectedError:     "authorization_code is required!",
+		},
+		{
+			name:              "capture_amount cannot be zero",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			commerceCode:      "597055555582",
+			authorizationCode: "1213",
+			amount:            0,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: capture_amount"},
+			expectedError:     "Invalid value for parameter: capture_amount",
+		},
+		{
+			name:              "capture_amount cannot be a negative number",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			commerceCode:      "597055555582",
+			authorizationCode: "1213",
+			amount:            -1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: capture_amount"},
+			expectedError:     "Invalid value for parameter: capture_amount",
+		},
+		{
+			name:              "token doesn't exist",
+			token:             strings.Repeat("b", 64),
+			buyOrder:          "123456",
+			commerceCode:      "597055555582",
+			authorizationCode: "1213",
+			amount:            -1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: token"},
+			expectedError:     "Invalid value for parameter: token",
+		},
+		{
+			name:              "token is less than 64 characters",
+			token:             strings.Repeat("a", 20),
+			buyOrder:          "123456",
+			commerceCode:      "597055555582",
+			authorizationCode: "1213",
+			amount:            -1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: token"},
+			expectedError:     "Invalid value for parameter: token",
+		},
+		{
+			name:              "commerce_code is not related with the transaction",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			commerceCode:      "597055555583",
+			authorizationCode: "1213",
+			amount:            -1000,
+			mockStatusCode:    500,
+			mockResponse:      map[string]string{"error_message": "Unexpected error"},
+			expectedError:     "Unexpected error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ms.StatusCode = tt.mockStatusCode
+			ms.Response = tt.mockResponse
+
+			_, err := tx.Capture(tt.token, tt.commerceCode, tt.buyOrder, tt.authorizationCode, tt.amount)
+
+			if err == nil {
+				t.Fatalf("Expected error, got nil")
+			}
+
+			cause := errors.Unwrap(err)
+
+			if cause.Error() != tt.expectedError {
+				t.Errorf("Wrong error cause.\nExpected: %q\nGot: %q)", tt.expectedError, cause.Error())
+			}
+
+			var werr *shared.WebpayError
+			if errors.As(err, &werr) {
+				if werr.Code != tt.mockStatusCode {
+					t.Errorf("Wrong error code. Expected %d, Got %d", tt.mockStatusCode, werr.Code)
+				}
+			}
+		})
+	}
+
+}
+
+func TestMallTransactionCapture_Success(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	ms.Response = map[string]any{
+		"authorization_code": "120050",
+		"authorization_date": "2026-04-07T01:28:04.145Z",
+		"captured_amount":    10000,
+		"response_code":      0,
+	}
+	ms.StatusCode = 200
+	tx := transbank.NewMallTransactionWithClient(mockClient, transactionOptions)
+	res, err := tx.Capture(strings.Repeat("a", 64), "buyOrder12345678", "597055555536", "1213", 10000)
+	if err != nil {
+		t.Fatalf("Expected result, got: %v", err)
+	}
+	if res.AuthorizationCode == "" {
+		t.Errorf("authorization_code must not be empty. Expected 1213, got %s", res.AuthorizationCode)
+	}
+	if res.ResponseCode != 0 {
+		t.Errorf("Wrong response_code. Expected 0, got %d", res.ResponseCode)
+	}
+}

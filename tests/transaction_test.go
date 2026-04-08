@@ -14,95 +14,6 @@ var transactionOptions = &transbank.Options{
 	CommerceCode: "commerce-code",
 }
 
-func TestTransactionCreate_InputError(t *testing.T) {
-	ms := NewMockServer()
-	defer ms.Server.Close()
-	mockClient := &mockClient{ms.Server.URL}
-	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
-
-	tests := []struct {
-		name          string
-		buyOrder      string
-		sessionId     string
-		amount        float64
-		returnUrl     string
-		expectedError string
-	}{
-		// BuyOrder errors
-		{
-			name:          "buy_order exceedes maximum length",
-			buyOrder:      strings.Repeat("a", 27),
-			sessionId:     "S1",
-			amount:        10000,
-			returnUrl:     "http://test.com",
-			expectedError: "SDK Error: buy_order is too long, the maximum length is 26",
-		},
-		{
-			name:          "buy_order is empty",
-			buyOrder:      "",
-			sessionId:     "S1",
-			amount:        10000,
-			returnUrl:     "http://test.com",
-			expectedError: "SDK Error: buy_order cannot be empty",
-		},
-		// SessionId errors
-		{
-			name:          "session_id exceedes maximum length",
-			buyOrder:      "OC123",
-			sessionId:     strings.Repeat("a", 62),
-			amount:        10000,
-			returnUrl:     "http://test.com",
-			expectedError: "SDK Error: session_id is too long, the maximum length is 61",
-		},
-		{
-			name:          "session_id is empty",
-			buyOrder:      "OC123",
-			sessionId:     "",
-			amount:        10000,
-			returnUrl:     "http://test.com",
-			expectedError: "SDK Error: session_id cannot be empty",
-		},
-		// ReturnUrl errors
-		{
-			name:          "return_url is empty",
-			buyOrder:      "OC123",
-			sessionId:     "S1",
-			amount:        10000,
-			returnUrl:     "",
-			expectedError: "SDK Error: return_url cannot be empty",
-		},
-		{
-			name:          "return_url exceedes maximum length",
-			buyOrder:      "OC123",
-			sessionId:     "S1",
-			amount:        10000,
-			returnUrl:     "https://example.com/?" + strings.Repeat("a", 236),
-			expectedError: "SDK Error: return_url is too long, the maximum length is 256",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Create(tt.buyOrder, tt.sessionId, tt.amount, tt.returnUrl)
-			if err == nil {
-				t.Errorf("Se esperaba error pero se obtuvo nil")
-				return
-			}
-			werr, ok := err.(*shared.WebpayError)
-			if !ok {
-				t.Fatalf("El error devuelto no es de tipo *shared.WebpayError, se obtuvo: %T", err)
-			}
-
-			if werr.Error() != tt.expectedError {
-				t.Errorf("Mensaje incorrecto.\nEsperado: %q\nObtenido: %q", tt.expectedError, werr.Error())
-			}
-
-			if werr.Code != -1 {
-				t.Errorf("Código de error incorrecto. Esperado: -1, Obtenido: %d", werr.Code)
-			}
-		})
-	}
-}
-
 func TestTransactionCreate_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
@@ -110,28 +21,130 @@ func TestTransactionCreate_ServerError(t *testing.T) {
 	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
 	tests := []struct {
 		name           string
-		amount         int
+		buyOrder       string
+		sessionId      string
+		amount         float64
+		returnUrl      string
 		mockStatusCode int
 		mockResponse   map[string]string
 		expectedError  string
 	}{
 		{
-			name:           "Amount rejected by Transbank",
+			name:           "'amount' cannot be a negative number",
+			buyOrder:       "11223344",
+			sessionId:      "S1",
 			amount:         -1,
-			mockStatusCode: 400,
+			returnUrl:      "http://www.return-url.com",
+			mockStatusCode: 422,
 			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: amount"},
 			expectedError:  "Invalid value for parameter: amount",
 		},
 		{
-			name:           "Credenciales Inválidas",
+			name:           "'amount' cannot be zero",
+			buyOrder:       "11223344",
+			sessionId:      "S1",
+			amount:         0,
+			returnUrl:      "http://www.return-url.com",
+			mockStatusCode: 422,
+			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: amount"},
+			expectedError:  "Invalid value for parameter: amount",
+		},
+		{
+			name:           "'buy_order' is empty",
+			buyOrder:       "",
+			sessionId:      "S1",
 			amount:         1000,
+			returnUrl:      "http://www.return-url.com",
+			mockStatusCode: 422,
+			mockResponse:   map[string]string{"error_message": "buy_order is required!"},
+			expectedError:  "buy_order is required!",
+		},
+		{
+			name:           "'buy_order' has invalid characters",
+			buyOrder:       "buy-order;",
+			sessionId:      "S1",
+			amount:         1000,
+			returnUrl:      "http://www.return-url.com",
+			mockStatusCode: 422,
+			mockResponse:   map[string]string{"error_message": "Parameter TBK_ORDEN_COMPRA rejected with value buy-order;"},
+			expectedError:  "Parameter TBK_ORDEN_COMPRA rejected with value buy-order;",
+		},
+		{
+			name:           "'buy_order' exceedes max length",
+			buyOrder:       strings.Repeat("a", 27),
+			sessionId:      "S1",
+			amount:         1000,
+			returnUrl:      "http://www.return-url.com",
+			mockStatusCode: 422,
+			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: buy_order"},
+			expectedError:  "Invalid value for parameter: buy_order",
+		},
+		{
+			name:           "'session_id' is empty",
+			buyOrder:       "11223344",
+			sessionId:      "",
+			amount:         1000,
+			returnUrl:      "http://www.return-url.com",
+			mockStatusCode: 422,
+			mockResponse:   map[string]string{"error_message": "session_id is required!"},
+			expectedError:  "session_id is required!",
+		},
+		{
+			name:           "'session_id' exceedes max length",
+			buyOrder:       "11223344",
+			sessionId:      strings.Repeat("a", 62),
+			amount:         1000,
+			returnUrl:      "http://www.return-url.com",
+			mockStatusCode: 422,
+			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: session_id"},
+			expectedError:  "Invalid value for parameter: session_id",
+		},
+		{
+			name:           "'return_url' is empty",
+			buyOrder:       "11223344",
+			sessionId:      "S1",
+			amount:         1000,
+			returnUrl:      "",
+			mockStatusCode: 400,
+			mockResponse:   map[string]string{"error_message": "return_url is required"},
+			expectedError:  "return_url is required",
+		},
+		{
+			name:           "'return_url' is not an url",
+			buyOrder:       "11223344",
+			sessionId:      "S1",
+			amount:         1000,
+			returnUrl:      "some-random-url",
+			mockStatusCode: 422,
+			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: return_url"},
+			expectedError:  "Invalid value for parameter: return_url",
+		},
+		{
+			name:           "'return_url' is not valid",
+			buyOrder:       "11223344",
+			sessionId:      "S1",
+			amount:         1000,
+			returnUrl:      "www.return-url.com",
+			mockStatusCode: 422,
+			mockResponse:   map[string]string{"error_message": "Invalid value for parameter: return_url"},
+			expectedError:  "Invalid value for parameter: return_url",
+		},
+		{
+			name:           "Invalid credentials",
+			buyOrder:       "11223344",
+			sessionId:      "S1",
+			amount:         1000,
+			returnUrl:      "http://www.return-url.com",
 			mockStatusCode: 401,
 			mockResponse:   map[string]string{"error_message": "not authorized"},
 			expectedError:  "not authorized",
 		},
 		{
-			name:           "Error Interno de Transbank",
+			name:           "Transbank error",
+			buyOrder:       "11223344",
+			sessionId:      "S1",
 			amount:         5000,
+			returnUrl:      "http://www.return-url.com",
 			mockStatusCode: 500,
 			mockResponse:   map[string]string{"error_message": "internal server error"},
 			expectedError:  "internal server error",
@@ -142,7 +155,7 @@ func TestTransactionCreate_ServerError(t *testing.T) {
 			ms.StatusCode = tt.mockStatusCode
 			ms.Response = tt.mockResponse
 
-			_, err := tx.Create("order", "session", float64(tt.amount), "http://return.cl")
+			_, err := tx.Create(tt.buyOrder, tt.sessionId, tt.amount, tt.returnUrl)
 
 			if err == nil {
 				t.Fatal("Se esperaba un error del servidor, pero err fue nil")
@@ -486,7 +499,7 @@ func TestTransactionStatus_Success(t *testing.T) {
 	}
 }
 
-func TestTRansactionRefund_InputError(t *testing.T) {
+func TestTransactionRefund_InputError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Server.Close()
 	mockClient := &mockClient{ms.Server.URL}
@@ -528,7 +541,7 @@ func TestTRansactionRefund_InputError(t *testing.T) {
 	}
 }
 
-func TestTRansactionRefund_ServerError(t *testing.T) {
+func TestTransactionRefund_ServerError(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
@@ -614,7 +627,7 @@ func TestTRansactionRefund_ServerError(t *testing.T) {
 	}
 }
 
-func TestTRansactionRefund_ReverseSuccess(t *testing.T) {
+func TestTransactionRefund_ReverseSuccess(t *testing.T) {
 	ms := NewMockServer()
 	defer ms.Close()
 	mockClient := &mockClient{ms.Server.URL}
@@ -672,5 +685,211 @@ func TestTransactionRefund_NullifiedSuccess(t *testing.T) {
 
 	if res.ResponseCode != 0 {
 		t.Errorf("Response Code Incorecto. Esperaba 0, obtuve %s", res.Type)
+	}
+}
+
+func TestTransactionCapture_InputError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Server.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+
+	tests := []struct {
+		name              string
+		token             string
+		buyOrder          string
+		authorizationCode string
+		amount            float64
+		expectedError     string
+	}{
+		{
+			name:              "Token is empty",
+			token:             "",
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            10000,
+			expectedError:     "SDK Error: token cannot be empty",
+		},
+		{
+			name:              "Token exceedes maximum length",
+			token:             strings.Repeat("a", 65),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            10000,
+			expectedError:     "SDK Error: token is too long, the maximum length is 64",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tx.Capture(tt.token, tt.buyOrder, tt.authorizationCode, tt.amount)
+			if err == nil {
+				t.Errorf("Se esperaba error pero se obtuvo nil")
+				return
+			}
+			werr, ok := err.(*shared.WebpayError)
+			if !ok {
+				t.Fatalf("El error devuelto no es de tipo *shared.WebpayError, se obtuvo: %T", err)
+			}
+
+			if werr.Error() != tt.expectedError {
+				t.Errorf("Mensaje incorrecto.\nEsperado: %q\nObtenido: %q", tt.expectedError, werr.Error())
+			}
+
+			if werr.Code != -1 {
+				t.Errorf("Código de error incorrecto. Esperado: -1, Obtenido: %d", werr.Code)
+			}
+		})
+	}
+}
+
+func TestTransactionCapture_ServerError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+	tests := []struct {
+		name              string
+		token             string
+		buyOrder          string
+		authorizationCode string
+		amount            float64
+		mockStatusCode    int
+		mockResponse      map[string]string
+		expectedError     string
+	}{
+		{
+			name:              "'authorization_code' is empty",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			authorizationCode: "",
+			amount:            1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "authorization_code is required!"},
+			expectedError:     "authorization_code is required!",
+		},
+		{
+			name:              "Wrong 'authorization_code'",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			authorizationCode: "1212",
+			amount:            1000,
+			mockStatusCode:    400,
+			mockResponse:      map[string]string{"error_message": "Transaction not found"},
+			expectedError:     "Transaction not found",
+		},
+		{
+			name:              "'buy_order' is empty",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "",
+			authorizationCode: "1213",
+			amount:            1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "buy_order is required!"},
+			expectedError:     "buy_order is required!",
+		},
+		{
+			name:              "Wrong 'buy_order'",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123457",
+			authorizationCode: "1213",
+			amount:            1000,
+			mockStatusCode:    400,
+			mockResponse:      map[string]string{"error_message": "Transaction not found"},
+			expectedError:     "Transaction not found",
+		},
+		{
+			name:              "'capture_amount' cannot be zero",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            0,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: capture_amount"},
+			expectedError:     "Invalid value for parameter: capture_amount",
+		},
+		{
+			name:              "'capture_amount' cannot be a negative number",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            -1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: capture_amount"},
+			expectedError:     "Invalid value for parameter: capture_amount",
+		},
+		{
+			name:              "Token doesn't exist",
+			token:             strings.Repeat("b", 64),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: token"},
+			expectedError:     "Invalid value for parameter: token",
+		},
+		{
+			name:              "Token is less than 64 characters",
+			token:             strings.Repeat("b", 20),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: token"},
+			expectedError:     "Invalid value for parameter: token",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ms.StatusCode = tt.mockStatusCode
+			ms.Response = tt.mockResponse
+
+			_, err := tx.Capture(tt.token, tt.buyOrder, tt.authorizationCode, tt.amount)
+
+			if err == nil {
+				t.Fatal("Se esperaba un error del servidor, pero err fue nil")
+			}
+
+			cause := errors.Unwrap(err)
+
+			if cause == nil {
+				t.Fatalf("El error no tiene una causa envuelta. Error obtenido: %v", err)
+			}
+
+			if cause.Error() != tt.expectedError {
+				t.Errorf("Causa del error incorrecta.\nEsperado: %q\nObtenido: %q\n(Mensaje completo: %v)",
+					tt.expectedError, cause.Error(), err)
+			}
+
+			var werr *shared.WebpayError
+			if errors.As(err, &werr) {
+				if werr.Code != tt.mockStatusCode {
+					t.Errorf("Código HTTP incorrecto. Esperado %d, obtuve %d", tt.mockStatusCode, werr.Code)
+				}
+			}
+		})
+	}
+}
+
+func TestTransactionCapture_Success(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	ms.Response = map[string]any{
+		"authorization_code": "120050",
+		"authorization_date": "2026-04-07T01:28:04.145Z",
+		"captured_amount":    10000,
+		"response_code":      0,
+	}
+	ms.StatusCode = 200
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+	res, err := tx.Capture(strings.Repeat("a", 64), "buyOrder12345678", "1213", 10000)
+	if err != nil {
+		t.Fatalf("Expected result, got: %v", err)
+	}
+	if res.AuthorizationCode == "" {
+		t.Errorf("authorization_code must not be empty. Expected 1213, got %s", res.AuthorizationCode)
+	}
+	if res.ResponseCode != 0 {
+		t.Errorf("Wrong response_code. Expected 0, got %d", res.ResponseCode)
 	}
 }
