@@ -674,3 +674,209 @@ func TestTransactionRefund_NullifiedSuccess(t *testing.T) {
 		t.Errorf("Response Code Incorecto. Esperaba 0, obtuve %s", res.Type)
 	}
 }
+
+func TestTransactionCapture_InputError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Server.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+
+	tests := []struct {
+		name              string
+		token             string
+		buyOrder          string
+		authorizationCode string
+		amount            float64
+		expectedError     string
+	}{
+		{
+			name:              "Token is empty",
+			token:             "",
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            10000,
+			expectedError:     "SDK Error: token cannot be empty",
+		},
+		{
+			name:              "Token exceedes maximum length",
+			token:             strings.Repeat("a", 65),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            10000,
+			expectedError:     "SDK Error: token is too long, the maximum length is 64",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tx.Capture(tt.token, tt.buyOrder, tt.authorizationCode, tt.amount)
+			if err == nil {
+				t.Errorf("Se esperaba error pero se obtuvo nil")
+				return
+			}
+			werr, ok := err.(*shared.WebpayError)
+			if !ok {
+				t.Fatalf("El error devuelto no es de tipo *shared.WebpayError, se obtuvo: %T", err)
+			}
+
+			if werr.Error() != tt.expectedError {
+				t.Errorf("Mensaje incorrecto.\nEsperado: %q\nObtenido: %q", tt.expectedError, werr.Error())
+			}
+
+			if werr.Code != -1 {
+				t.Errorf("Código de error incorrecto. Esperado: -1, Obtenido: %d", werr.Code)
+			}
+		})
+	}
+}
+
+func TestTransactionCapture_ServerError(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+	tests := []struct {
+		name              string
+		token             string
+		buyOrder          string
+		authorizationCode string
+		amount            float64
+		mockStatusCode    int
+		mockResponse      map[string]string
+		expectedError     string
+	}{
+		{
+			name:              "'authorization_code' is empty",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			authorizationCode: "",
+			amount:            1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "authorization_code is required!"},
+			expectedError:     "authorization_code is required!",
+		},
+		{
+			name:              "Wrong 'authorization_code'",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			authorizationCode: "1212",
+			amount:            1000,
+			mockStatusCode:    400,
+			mockResponse:      map[string]string{"error_message": "Transaction not found"},
+			expectedError:     "Transaction not found",
+		},
+		{
+			name:              "'buy_order' is empty",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "",
+			authorizationCode: "1213",
+			amount:            1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "buy_order is required!"},
+			expectedError:     "buy_order is required!",
+		},
+		{
+			name:              "Wrong 'buy_order'",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123457",
+			authorizationCode: "1213",
+			amount:            1000,
+			mockStatusCode:    400,
+			mockResponse:      map[string]string{"error_message": "Transaction not found"},
+			expectedError:     "Transaction not found",
+		},
+		{
+			name:              "'capture_amount' cannot be zero",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            0,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: capture_amount"},
+			expectedError:     "Invalid value for parameter: capture_amount",
+		},
+		{
+			name:              "'capture_amount' cannot be a negative number",
+			token:             strings.Repeat("a", 64),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            -1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: capture_amount"},
+			expectedError:     "Invalid value for parameter: capture_amount",
+		},
+		{
+			name:              "Token doesn't exist",
+			token:             strings.Repeat("b", 64),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: token"},
+			expectedError:     "Invalid value for parameter: token",
+		},
+		{
+			name:              "Token is less than 64 characters",
+			token:             strings.Repeat("b", 20),
+			buyOrder:          "123456",
+			authorizationCode: "1213",
+			amount:            1000,
+			mockStatusCode:    422,
+			mockResponse:      map[string]string{"error_message": "Invalid value for parameter: token"},
+			expectedError:     "Invalid value for parameter: token",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ms.StatusCode = tt.mockStatusCode
+			ms.Response = tt.mockResponse
+
+			_, err := tx.Capture(tt.token, tt.buyOrder, tt.authorizationCode, tt.amount)
+
+			if err == nil {
+				t.Fatal("Se esperaba un error del servidor, pero err fue nil")
+			}
+
+			cause := errors.Unwrap(err)
+
+			if cause == nil {
+				t.Fatalf("El error no tiene una causa envuelta. Error obtenido: %v", err)
+			}
+
+			if cause.Error() != tt.expectedError {
+				t.Errorf("Causa del error incorrecta.\nEsperado: %q\nObtenido: %q\n(Mensaje completo: %v)",
+					tt.expectedError, cause.Error(), err)
+			}
+
+			var werr *shared.WebpayError
+			if errors.As(err, &werr) {
+				if werr.Code != tt.mockStatusCode {
+					t.Errorf("Código HTTP incorrecto. Esperado %d, obtuve %d", tt.mockStatusCode, werr.Code)
+				}
+			}
+		})
+	}
+}
+
+func TestTransactionCapture_Success(t *testing.T) {
+	ms := NewMockServer()
+	defer ms.Close()
+	mockClient := &mockClient{ms.Server.URL}
+	ms.Response = map[string]any{
+		"authorization_code": "120050",
+		"authorization_date": "2026-04-07T01:28:04.145Z",
+		"captured_amount":    10000,
+		"response_code":      0,
+	}
+	ms.StatusCode = 200
+	tx := transbank.NewTransactionWithClient(mockClient, transactionOptions)
+	res, err := tx.Capture(strings.Repeat("a", 64), "buyOrder12345678", "1213", 10000)
+	if err != nil {
+		t.Fatalf("Expected result, got: %v", err)
+	}
+	if res.AuthorizationCode == "" {
+		t.Errorf("authorization_code must not be empty. Expected 1213, got %s", res.AuthorizationCode)
+	}
+	if res.ResponseCode != 0 {
+		t.Errorf("Wrong response_code. Expected 0, got %d", res.ResponseCode)
+	}
+}
