@@ -24,15 +24,6 @@ func NewTransaction(client shared.HTTPClientInterface, options *shared.Options) 
 }
 
 func (t *Transaction) Create(buyOrder, sessionId string, amount float64, returnUrl string) (*TransactionCreateResponse, error) {
-	if err := shared.HasTextWithMaxLength(buyOrder, 26, "buy_order"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
-	}
-	if err := shared.HasTextWithMaxLength(sessionId, 61, "session_id"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
-	}
-	if err := shared.HasTextWithMaxLength(returnUrl, 256, "return_url"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
-	}
 	payload := map[string]any{
 		"buy_order":  buyOrder,
 		"session_id": sessionId,
@@ -96,12 +87,6 @@ func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundRe
 
 func (t *Transaction) Capture(token, buyOrder, authorizationCode string, captureAmount float64) (*TransactionCaptureResponse, error) {
 	if err := shared.HasTextWithMaxLength(token, 64, "token"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
-	}
-	if err := shared.HasTextWithMaxLength(buyOrder, 26, "buy_order"); err != nil {
-		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
-	}
-	if err := shared.HasTextWithMaxLength(authorizationCode, 6, "authorizationCode"); err != nil {
 		return nil, &shared.WebpayError{Code: -1, ServiceMessage: "SDK Error", Cause: err}
 	}
 
