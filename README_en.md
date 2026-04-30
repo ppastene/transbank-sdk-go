@@ -3,18 +3,26 @@ Library to connect with the Transbank API written in the Go language
 
 [Spanish](./README.md) | **English**
 ## Index
+- [Implementation](#implementation)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [First steps](#first-steps)
 - [Use](#use)
   - [Webpay Plus](#webpay-plus)
   - [Webpay Plus Mall](#webpay-plus-mall)
+  - [Oneclick](#oneclick)
 - [Error management](#error-management)
-- [Examples](#examples)
-    - [HTTP Client injection](#http-client-injection)
-        - [Example using Resty client](#example-using-resty-client)
+- [HTTP Client injection](#http-client-injection)
+    - [Example using Resty client](#example-using-resty-client)
 - [Implementation Example](#implementation-example)
-- [Roadmap](#roadmap)
+## Implementation
+|        Service       | Implemented | Documentation | Unit Testing |
+|:--------------------:|:-----------:|:-------------:|:------------:|
+| Webpay Plus          |      ✅     |       ❌      |      ✅      |
+| Webpay Plus Mall     |      ✅     |       ❌      |      ✅      |
+| OneClick             |      ✅     |       ❌      |      ❌      |
+| PatPass              |      ❌     |       ❌      |      ❌      |
+| Transaccion Completa |      ❌     |       ❌      |      ❌      |
 ## Requirements
 - Go 1.21.0
 ## Installation
@@ -182,8 +190,7 @@ if err != nil {
     Invalid value for parameter: token
 */
 ```
-## Examples
-### HTTP Client injection
+## HTTP Client injection
 The SDK includes a HTTP client to communicate with the Transbank API. You can replace that client by injecting a HTTP client of your choice.
 
 These are the functions of the services you can inject a HTTP client
@@ -209,7 +216,7 @@ The responses returned by the interface are:
 - []byte: The URL raw response.
 - int: The HTTP code of the response
 - error: The error in case of problems with the DNS, hostname, communication, unmarshalling
-#### Example using Resty client
+### Example using Resty client
 ```go
 type RestyClient struct {
 	*resty.Client
@@ -243,7 +250,5 @@ func main() {
 	fmt.Println(resp)
 }
 ```
-### Implementation Example
+## Implementation Example
 In [this repository](https://github.com/ppastene/transbank-sdk-go-example) you will find an implementation example of the SDK using Goravel. Follow the README instructions and the [Goravel documentation](https://www.goravel.dev/getting-started/installation.html) for further information.
-## Roadmap
-To see what is yet to implement check the [TODO.md](./TODO.md) file.

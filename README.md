@@ -3,18 +3,26 @@ Libreria de integración con la API de Transbank escrito en el lenguaje Go
 
 **Español** | [English](./README_en.md)
 ## Índice
+- [Implementación](#implementacion)
 - [Requisitos](#requisitos)
 - [Instalación](#instalación)
 - [Primeros pasos](#primeros-pasos)
 - [Uso](#uso)
   - [Webpay Plus](#webpay-plus)
   - [Webpay Plus Mall](#webpay-plus-mall)
+  - [Oneclick](#oneclick)
 - [Manejo de errores](#manejo-de-errores)
-- [Ejemplos avanzados](#ejemplos-avanzados)
-    - [Inyección de cliente HTTP](#inyección-de-cliente-http)
-        - [Ejemplo de inyección con Resty](#ejemplo-de-inyección-con-resty)
+- [Inyección de cliente HTTP](#inyección-de-cliente-http)
+    - [Ejemplo de inyección con Resty](#ejemplo-de-inyección-con-resty)
 - [Ejemplo de Implementación](#ejemplo-de-implementacion)
-- [Roadmap](#roadmap)
+## Implementación
+|       Servicio       | Implementado | Documentacion | Pruebas Unitarias |
+|:--------------------:|:------------:|:-------------:|:-----------------:|
+| Webpay Plus          |      ✅      |       ❌      |         ✅        |
+| Webpay Plus Mall     |      ✅      |       ❌      |         ✅        |
+| OneClick             |      ✅      |       ❌      |         ❌        |
+| PatPass              |      ❌      |       ❌      |         ❌        |
+| Transaccion Completa |      ❌      |       ❌      |         ❌        |
 ## Requisitos
 - Go 1.21.0
 ## Instalación
@@ -181,8 +189,7 @@ if err != nil {
     Invalid value for parameter: token
 */
 ```
-## Ejemplos avanzados
-### Inyección de cliente HTTP
+## Inyección de cliente HTTP
 El SDK posee un cliente HTTP para la comunicación con la API de Transbank. Puede reemplazar aquel cliente con el que desee usar en el SDK.
 
 Estos son los servicios de los cuales puede inyectar un cliente HTTP
@@ -208,7 +215,7 @@ Las respuestas que devuelve el metodo son:
 - []byte: La respuesta en crudo de la petición.
 - int: El codigo HTTP de la respuesta
 - error: Error en caso de problemas de comunicación, DNS, hostname, unmarshall
-#### Ejemplo de inyección con Resty
+### Ejemplo de inyección con Resty
 ```go
 type RestyClient struct {
 	*resty.Client
@@ -242,7 +249,5 @@ func main() {
 	fmt.Println(resp)
 }
 ```
-### Ejemplo de implementacion
+## Ejemplo de implementacion
 En [este repositorio](https://github.com/ppastene/transbank-sdk-go-example) puede encontrar un ejemplo de implementación del SDK usando Goravel. Siga las instrucciones del README y la [documentación de Goravel](https://www.goravel.dev/getting-started/installation.html) para mas información.
-## Roadmap
-Para revisar lo que aun queda por implementar revise el archivo [TODO.md](./TODO.md).
