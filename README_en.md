@@ -3,6 +3,7 @@ Library to connect with the Transbank API written in the Go language
 
 [Spanish](./README.md) | **English**
 ## Index
+- [Implementation](#implementation)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [First steps](#first-steps)
@@ -14,7 +15,14 @@ Library to connect with the Transbank API written in the Go language
     - [HTTP Client injection](#http-client-injection)
         - [Example using Resty client](#example-using-resty-client)
 - [Implementation Example](#implementation-example)
-- [Roadmap](#roadmap)
+## Implementation
+|        Service       | Implemented | Documentation | Unit Testing |
+|:--------------------:|:-----------:|:-------------:|:------------:|
+| Webpay Plus          |      ✅     |       ❌      |      ✅      |
+| Webpay Plus Mall     |      ✅     |       ❌      |      ✅      |
+| OneClick             |      ✅     |       ❌      |      ❌      |
+| PatPass              |      ❌     |       ❌      |      ❌      |
+| Transaccion Completa |      ❌     |       ❌      |      ❌      |
 ## Requirements
 - Go 1.21.0
 ## Installation
@@ -245,5 +253,3 @@ func main() {
 ```
 ### Implementation Example
 In [this repository](https://github.com/ppastene/transbank-sdk-go-example) you will find an implementation example of the SDK using Goravel. Follow the README instructions and the [Goravel documentation](https://www.goravel.dev/getting-started/installation.html) for further information.
-## Roadmap
-To see what is yet to implement check the [TODO.md](./TODO.md) file.
