@@ -19,6 +19,7 @@ Librería de integración con la API de Transbank escrita en el lenguaje Go.
   - [PatPass](#patpass)
 - [Manejo de errores](#manejo-de-errores)
 - [Inyección de cliente HTTP](#inyección-de-cliente-http)
+- [Proyecto de ejemplo](#proyecto-de-ejemplo)
 
 ## Implementación
 
@@ -632,3 +633,7 @@ opts := transbank.Options{
 ```
 
 Si no se especifica, el SDK usa su cliente interno con timeout de 30 segundos.
+
+## Proyecto de ejemplo
+
+Para ver un ejemplo completo de integración con cada servicio, consulte el repositorio [transbank-sdk-go-example](https://github.com/ppastene/transbank-sdk-go-example).
