@@ -39,6 +39,15 @@ func testMallOptions(m *mockServer) transbank.Options {
 	}
 }
 
+func testMallOptionsNoValidation(m *mockServer) transbank.Options {
+	return transbank.Options{
+		CommerceCode: testMallCode,
+		ApiKey:       testAPIKey,
+		Environment:  transbank.Integration,
+		HTTPClient:   m.Client(),
+	}
+}
+
 func TestNewMallTransaction(t *testing.T) {
 	tests := []struct {
 		name string

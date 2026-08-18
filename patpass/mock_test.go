@@ -134,6 +134,15 @@ func testOptions(m *mockServer) patpass.Options {
 	}
 }
 
+func testOptionsNoValidation(m *mockServer) patpass.Options {
+	return patpass.Options{
+		CommerceCode:  testPatpassCommerceCode,
+		Authorization: testPatpassAuth,
+		Environment:   patpass.Integration,
+		HTTPClient:    m.Client(),
+	}
+}
+
 func wantValidationError(t *testing.T, err error) {
 	t.Helper()
 	if err == nil {
