@@ -126,10 +126,11 @@ func (m *mockServer) LastRequest() recordedRequest {
 
 func testOptions(m *mockServer) patpass.Options {
 	return patpass.Options{
-		CommerceCode:  testPatpassCommerceCode,
-		Authorization: testPatpassAuth,
-		Environment:   patpass.Integration,
-		HTTPClient:    m.Client(),
+		CommerceCode:   testPatpassCommerceCode,
+		Authorization:  testPatpassAuth,
+		Environment:    patpass.Integration,
+		HTTPClient:     m.Client(),
+		ValidateInputs: true,
 	}
 }
 

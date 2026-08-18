@@ -31,10 +31,11 @@ func testMallCommitDetails() []transaccioncompleta.MallCommitDetails {
 
 func testMallOptions(m *mockServer) transbank.Options {
 	return transbank.Options{
-		CommerceCode: testMallCode,
-		ApiKey:       testAPIKey,
-		Environment:  transbank.Integration,
-		HTTPClient:   m.Client(),
+		CommerceCode:   testMallCode,
+		ApiKey:         testAPIKey,
+		Environment:    transbank.Integration,
+		HTTPClient:     m.Client(),
+		ValidateInputs: true,
 	}
 }
 

@@ -118,10 +118,11 @@ func (m *mockServer) RequestCount() int {
 
 func testOptions(m *mockServer) transbank.Options {
 	return transbank.Options{
-		CommerceCode: testCommerceCode,
-		ApiKey:       testAPIKey,
-		Environment:  transbank.Integration,
-		HTTPClient:   m.Client(),
+		CommerceCode:   testCommerceCode,
+		ApiKey:         testAPIKey,
+		Environment:    transbank.Integration,
+		HTTPClient:     m.Client(),
+		ValidateInputs: true,
 	}
 }
 

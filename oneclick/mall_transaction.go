@@ -29,14 +29,16 @@ func NewMallTransaction(opts transbank.Options) (*MallTransaction, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}
-	if err := internal.ValidateCommerceCode(opts.CommerceCode); err != nil {
-		return nil, err
+	if opts.ValidateInputs {
+		if err := internal.ValidateCommerceCode(opts.CommerceCode); err != nil {
+			return nil, err
+		}
 	}
 	baseURL := internal.INTEGRATION_URL
 	if opts.Environment == transbank.Production {
 		baseURL = internal.PRODUCTION_URL
 	}
-	cfg := internal.NewConfig(opts.CommerceCode, opts.ApiKey, baseURL)
+	cfg := internal.NewConfig(opts.CommerceCode, opts.ApiKey, baseURL, opts.ValidateInputs)
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     opts.CommerceCode,
 		"Tbk-Api-Key-Secret": opts.ApiKey,
@@ -50,17 +52,19 @@ func NewMallTransaction(opts transbank.Options) (*MallTransaction, error) {
 // Authorize charges a payment using the card enrolled for the given user and
 // tbk_user, with one detail per store. It returns the authorization details.
 func (m *MallTransaction) Authorize(username, tbkUser, buyOrder string, details []MallDetails) (*OneclickMallTransactionAuthorizeResponse, error) {
-	if err := internal.ValidateUsername(username); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateTbkUser(tbkUser); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := validateMallDetails(details); err != nil {
-		return nil, err
+	if m.config.ValidateInputs {
+		if err := internal.ValidateUsername(username); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateTbkUser(tbkUser); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
+		if err := validateMallDetails(details, m.config.ValidateInputs); err != nil {
+			return nil, err
+		}
 	}
 
 	payload := map[string]any{
@@ -76,7 +80,10 @@ func (m *MallTransaction) Authorize(username, tbkUser, buyOrder string, details 
 	return &response, nil
 }
 
-func validateMallDetails(details []MallDetails) error {
+func validateMallDetails(details []MallDetails, validateInputs bool) error {
+	if !validateInputs {
+		return nil
+	}
 	if len(details) == 0 {
 		return &transbank.ValidationError{Message: "details must not be empty"}
 	}
@@ -100,8 +107,10 @@ func validateMallDetails(details []MallDetails) error {
 // Status returns the current state of a transaction identified by its buy
 // order, including one detail per store.
 func (m *MallTransaction) Status(buyOrder string) (*OneclickMallTransactionStatusResponse, error) {
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
+	if m.config.ValidateInputs {
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
 	}
 	var response OneclickMallTransactionStatusResponse
 	if err := internal.NewRequestor(&m.config).Get(fmt.Sprintf("%s/transactions/%s", oneClickPath, buyOrder), &response); err != nil {
@@ -114,17 +123,19 @@ func (m *MallTransaction) Status(buyOrder string) (*OneclickMallTransactionStatu
 // order, the store commerce code and its buy order, for the specified amount.
 // The refund type is either "NULLIFY" or "REVERSED".
 func (m *MallTransaction) Refund(buyOrder, childCommerceCode, childBuyOrder string, amount float64) (*OneclickMallTransactionRefundResponse, error) {
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCommerceCode(childCommerceCode); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateBuyOrder(childBuyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(amount); err != nil {
-		return nil, err
+	if m.config.ValidateInputs {
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCommerceCode(childCommerceCode); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateBuyOrder(childBuyOrder); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateAmount(amount); err != nil {
+			return nil, err
+		}
 	}
 
 	payload := map[string]any{
@@ -144,17 +155,19 @@ func (m *MallTransaction) Refund(buyOrder, childCommerceCode, childBuyOrder stri
 // Authorize, for the specified amount. Only available in environments with
 // deferred capture enabled.
 func (m *MallTransaction) Capture(buyOrder, commerceCode, authorizationCode string, amount float64) (*OneclickMallTransactionCaptureResponse, error) {
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCommerceCode(commerceCode); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(amount); err != nil {
-		return nil, err
-	}
-	if authorizationCode == "" {
-		return nil, &transbank.ValidationError{Message: "authorization_code must not be empty"}
+	if m.config.ValidateInputs {
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCommerceCode(commerceCode); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateAmount(amount); err != nil {
+			return nil, err
+		}
+		if authorizationCode == "" {
+			return nil, &transbank.ValidationError{Message: "authorization_code must not be empty"}
+		}
 	}
 
 	payload := map[string]any{

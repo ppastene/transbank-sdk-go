@@ -27,7 +27,7 @@ func NewInscription(opts Options) (*Inscription, error) {
 	if opts.Environment == Production {
 		baseURL = production_url
 	}
-	cfg := internal.NewConfig(opts.CommerceCode, opts.Authorization, baseURL)
+	cfg := internal.NewConfig(opts.CommerceCode, opts.Authorization, baseURL, opts.ValidateInputs)
 	cfg.Headers = map[string]string{
 		"Commercecode":  opts.CommerceCode,
 		"Authorization": opts.Authorization,
@@ -43,35 +43,37 @@ func NewInscription(opts Options) (*Inscription, error) {
 // subscription voucher. maxAmount may be empty. It returns the enrollment token
 // and the URL of the enrollment form.
 func (i *Inscription) Start(url, firstName, fLastname, sLastname, rut, serviceId, finalUrl, maxAmount, phoneNumber, mobileNumber, patPassName, userEmail, commerceEmail, userAddress, userCity string) (*InscriptionStartResponse, error) {
-	if err := internal.ValidateReturnURL(url); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateReturnURL(finalUrl); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateEmail(userEmail); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateEmail(commerceEmail); err != nil {
-		return nil, err
-	}
-	for _, v := range []struct {
-		value string
-		name  string
-	}{
-		{firstName, "name"},
-		{fLastname, "fLastname"},
-		{sLastname, "sLastname"},
-		{rut, "rut"},
-		{serviceId, "serviceId"},
-		{phoneNumber, "phoneNumber"},
-		{mobileNumber, "mobileNumber"},
-		{patPassName, "patPassName"},
-		{userAddress, "userAddress"},
-		{userCity, "userCity"},
-	} {
-		if v.value == "" {
-			return nil, &transbank.ValidationError{Message: v.name + " must not be empty"}
+	if i.config.ValidateInputs {
+		if err := internal.ValidateReturnURL(url); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateReturnURL(finalUrl); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateEmail(userEmail); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateEmail(commerceEmail); err != nil {
+			return nil, err
+		}
+		for _, v := range []struct {
+			value string
+			name  string
+		}{
+			{firstName, "name"},
+			{fLastname, "fLastname"},
+			{sLastname, "sLastname"},
+			{rut, "rut"},
+			{serviceId, "serviceId"},
+			{phoneNumber, "phoneNumber"},
+			{mobileNumber, "mobileNumber"},
+			{patPassName, "patPassName"},
+			{userAddress, "userAddress"},
+			{userCity, "userCity"},
+		} {
+			if v.value == "" {
+				return nil, &transbank.ValidationError{Message: v.name + " must not be empty"}
+			}
 		}
 	}
 
@@ -105,8 +107,10 @@ func (i *Inscription) Start(url, firstName, fLastname, sLastname, rut, serviceId
 // Status returns the state of a previously started enrollment identified by its
 // token, indicating whether it was authorized and the URL of the voucher.
 func (i *Inscription) Status(token string) (*InscriptionStatusResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
+	if i.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
 	}
 	payload := map[string]string{
 		"token": token,

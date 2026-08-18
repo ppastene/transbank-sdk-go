@@ -24,14 +24,16 @@ func NewTransaction(opts transbank.Options) (*Transaction, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}
-	if err := internal.ValidateCommerceCode(opts.CommerceCode); err != nil {
-		return nil, err
+	if opts.ValidateInputs {
+		if err := internal.ValidateCommerceCode(opts.CommerceCode); err != nil {
+			return nil, err
+		}
 	}
 	baseURL := internal.INTEGRATION_URL
 	if opts.Environment == transbank.Production {
 		baseURL = internal.PRODUCTION_URL
 	}
-	cfg := internal.NewConfig(opts.CommerceCode, opts.ApiKey, baseURL)
+	cfg := internal.NewConfig(opts.CommerceCode, opts.ApiKey, baseURL, opts.ValidateInputs)
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     opts.CommerceCode,
 		"Tbk-Api-Key-Secret": opts.ApiKey,
@@ -47,23 +49,25 @@ func NewTransaction(opts transbank.Options) (*Transaction, error) {
 // omit it when the merchant has the "without cvv" option enabled. It returns
 // the transaction token.
 func (t *Transaction) Create(buyOrder, sessionId string, amount float64, cardNumber, cardExpirationDate, cvv string) (*TransactionCreateResponse, error) {
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateSessionID(sessionId); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(amount); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCardNumber(cardNumber); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCardExpirationDate(cardExpirationDate); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCVV(cvv); err != nil {
-		return nil, err
+	if t.config.ValidateInputs {
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateSessionID(sessionId); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateAmount(amount); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCardNumber(cardNumber); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCardExpirationDate(cardExpirationDate); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCVV(cvv); err != nil {
+			return nil, err
+		}
 	}
 
 	payload := map[string]any{
@@ -87,11 +91,13 @@ func (t *Transaction) Create(buyOrder, sessionId string, amount float64, cardNum
 // by its token, for the given number of installments. It returns the deferred
 // periods when available.
 func (t *Transaction) Installments(token string, installmentsNumber int) (*TransactionInstallmentsResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateInstallmentsNumber(installmentsNumber); err != nil {
-		return nil, err
+	if t.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateInstallmentsNumber(installmentsNumber); err != nil {
+			return nil, err
+		}
 	}
 	payload := map[string]any{
 		"installments_number": installmentsNumber,
@@ -108,8 +114,10 @@ func (t *Transaction) Installments(token string, installmentsNumber int) (*Trans
 // gracePeriod parameters are optional and only sent when not nil; pass nil for
 // a single-installment payment.
 func (t *Transaction) Commit(token string, idQueryInstallments *int, deferredPeriodIndex *int, gracePeriod *bool) (*TransactionCommitResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
+	if t.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
 	}
 	payload := map[string]any{}
 	if idQueryInstallments != nil {
@@ -130,8 +138,10 @@ func (t *Transaction) Commit(token string, idQueryInstallments *int, deferredPer
 
 // Status returns the current state of a transaction identified by its token.
 func (t *Transaction) Status(token string) (*TransactionStatusResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
+	if t.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
 	}
 	var response TransactionStatusResponse
 	if err := internal.NewRequestor(&t.config).Get(fmt.Sprintf("%s/%s", transactionsPath, token), &response); err != nil {
@@ -144,11 +154,13 @@ func (t *Transaction) Status(token string) (*TransactionStatusResponse, error) {
 // partially, for the specified amount. The refund type is either "NULLIFY" or
 // "REVERSED".
 func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(amount); err != nil {
-		return nil, err
+	if t.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateAmount(amount); err != nil {
+			return nil, err
+		}
 	}
 	payload := map[string]float64{
 		"amount": amount,
@@ -164,17 +176,19 @@ func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundRe
 // using the buy order and authorization code obtained after Commit. Only
 // available in environments with deferred capture enabled.
 func (t *Transaction) Capture(token, buyOrder, authorizationCode string, captureAmount float64) (*TransactionCaptureResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(captureAmount); err != nil {
-		return nil, err
-	}
-	if authorizationCode == "" {
-		return nil, &transbank.ValidationError{Message: "authorization_code must not be empty"}
+	if t.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateAmount(captureAmount); err != nil {
+			return nil, err
+		}
+		if authorizationCode == "" {
+			return nil, &transbank.ValidationError{Message: "authorization_code must not be empty"}
+		}
 	}
 	payload := map[string]any{
 		"buy_order":          buyOrder,

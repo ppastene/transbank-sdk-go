@@ -26,9 +26,10 @@ func TestNewMallTransaction(t *testing.T) {
 		{
 			name: "short commerce code",
 			opts: transbank.Options{
-				CommerceCode: "5970",
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
+				CommerceCode:   "5970",
+				ApiKey:         testAPIKey,
+				Environment:    transbank.Integration,
+				ValidateInputs: true,
 			},
 			want: &transbank.ValidationError{},
 		},

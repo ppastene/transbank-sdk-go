@@ -47,14 +47,16 @@ func NewMallTransaction(opts transbank.Options) (*MallTransaction, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}
-	if err := internal.ValidateCommerceCode(opts.CommerceCode); err != nil {
-		return nil, err
+	if opts.ValidateInputs {
+		if err := internal.ValidateCommerceCode(opts.CommerceCode); err != nil {
+			return nil, err
+		}
 	}
 	baseURL := internal.INTEGRATION_URL
 	if opts.Environment == transbank.Production {
 		baseURL = internal.PRODUCTION_URL
 	}
-	cfg := internal.NewConfig(opts.CommerceCode, opts.ApiKey, baseURL)
+	cfg := internal.NewConfig(opts.CommerceCode, opts.ApiKey, baseURL, opts.ValidateInputs)
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     opts.CommerceCode,
 		"Tbk-Api-Key-Secret": opts.ApiKey,
@@ -70,22 +72,24 @@ func NewMallTransaction(opts transbank.Options) (*MallTransaction, error) {
 // omit it when the merchant has the "without cvv" option enabled. It returns
 // the transaction token.
 func (m *MallTransaction) Create(buyOrder, sessionId, cardNumber, cardExpirationDate string, details []MallDetails, cvv string) (*MallTransactionCreateResponse, error) {
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
+	if m.config.ValidateInputs {
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateSessionID(sessionId); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCardNumber(cardNumber); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCardExpirationDate(cardExpirationDate); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCVV(cvv); err != nil {
+			return nil, err
+		}
 	}
-	if err := internal.ValidateSessionID(sessionId); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCardNumber(cardNumber); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCardExpirationDate(cardExpirationDate); err != nil {
-		return nil, err
-	}
-	if err := validateMallDetails(details); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCVV(cvv); err != nil {
+	if err := validateMallDetails(details, m.config.ValidateInputs); err != nil {
 		return nil, err
 	}
 
@@ -110,11 +114,13 @@ func (m *MallTransaction) Create(buyOrder, sessionId, cardNumber, cardExpiration
 // by its token, with one query detail per store. It returns the deferred
 // periods when available.
 func (m *MallTransaction) Installments(token string, details []MallInstallmentsDetails) (*MallTransactionInstallmentsResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := validateMallInstallmentsDetails(details); err != nil {
-		return nil, err
+	if m.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
+		if err := validateMallInstallmentsDetails(details, m.config.ValidateInputs); err != nil {
+			return nil, err
+		}
 	}
 	var response MallTransactionInstallmentsResponse
 	if err := internal.NewRequestor(&m.config).Post(fmt.Sprintf("%s/%s/installments", transactionsPath, token), details, &response); err != nil {
@@ -127,11 +133,13 @@ func (m *MallTransaction) Installments(token string, details []MallInstallmentsD
 // token, authorizing the payment of all its details. Each detail's optional
 // fields are only sent when not nil.
 func (m *MallTransaction) Commit(token string, details []MallCommitDetails) (*MallTransactionCommitResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := validateMallCommitDetails(details); err != nil {
-		return nil, err
+	if m.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
+		if err := validateMallCommitDetails(details, m.config.ValidateInputs); err != nil {
+			return nil, err
+		}
 	}
 	payload := map[string]any{
 		"details": details,
@@ -146,8 +154,10 @@ func (m *MallTransaction) Commit(token string, details []MallCommitDetails) (*Ma
 // Status returns the current state of a mall transaction identified by its
 // token, including one detail per store.
 func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
+	if m.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
 	}
 	var response MallTransactionStatusResponse
 	if err := internal.NewRequestor(&m.config).Get(fmt.Sprintf("%s/%s", transactionsPath, token), &response); err != nil {
@@ -160,17 +170,19 @@ func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, 
 // transaction token, the store buy order and its commerce code, for the
 // specified amount. The refund type is either "NULLIFY" or "REVERSED".
 func (m *MallTransaction) Refund(token, buyOrder, commerceCode string, amount float64) (*MallTransactionRefundResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCommerceCode(commerceCode); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(amount); err != nil {
-		return nil, err
+	if m.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCommerceCode(commerceCode); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateAmount(amount); err != nil {
+			return nil, err
+		}
 	}
 	payload := map[string]any{
 		"buy_order":     buyOrder,
@@ -189,20 +201,22 @@ func (m *MallTransaction) Refund(token, buyOrder, commerceCode string, amount fl
 // and the authorization code obtained after Commit. Only available in
 // environments with deferred capture enabled.
 func (m *MallTransaction) Capture(token, commerceCode, buyOrder, authorizationCode string, captureAmount float64) (*MallTransactionCaptureResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCommerceCode(commerceCode); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(captureAmount); err != nil {
-		return nil, err
-	}
-	if authorizationCode == "" {
-		return nil, &transbank.ValidationError{Message: "authorization_code must not be empty"}
+	if m.config.ValidateInputs {
+		if err := internal.ValidateToken(token); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateCommerceCode(commerceCode); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+			return nil, err
+		}
+		if err := internal.ValidateAmount(captureAmount); err != nil {
+			return nil, err
+		}
+		if authorizationCode == "" {
+			return nil, &transbank.ValidationError{Message: "authorization_code must not be empty"}
+		}
 	}
 	payload := map[string]any{
 		"commerce_code":      commerceCode,
@@ -217,7 +231,10 @@ func (m *MallTransaction) Capture(token, commerceCode, buyOrder, authorizationCo
 	return &response, nil
 }
 
-func validateMallDetails(details []MallDetails) error {
+func validateMallDetails(details []MallDetails, validateInputs bool) error {
+	if !validateInputs {
+		return nil
+	}
 	if len(details) == 0 {
 		return &transbank.ValidationError{Message: "details must not be empty"}
 	}
@@ -235,7 +252,10 @@ func validateMallDetails(details []MallDetails) error {
 	return nil
 }
 
-func validateMallInstallmentsDetails(details []MallInstallmentsDetails) error {
+func validateMallInstallmentsDetails(details []MallInstallmentsDetails, validateInputs bool) error {
+	if !validateInputs {
+		return nil
+	}
 	if len(details) == 0 {
 		return &transbank.ValidationError{Message: "details must not be empty"}
 	}
@@ -253,7 +273,10 @@ func validateMallInstallmentsDetails(details []MallInstallmentsDetails) error {
 	return nil
 }
 
-func validateMallCommitDetails(details []MallCommitDetails) error {
+func validateMallCommitDetails(details []MallCommitDetails, validateInputs bool) error {
+	if !validateInputs {
+		return nil
+	}
 	if len(details) == 0 {
 		return &transbank.ValidationError{Message: "details must not be empty"}
 	}

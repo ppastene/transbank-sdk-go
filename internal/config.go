@@ -13,20 +13,22 @@ type Credentials struct {
 }
 
 type Config struct {
-	Credentials Credentials
-	HTTP        transbank.HTTPClient
-	BaseURL     string
-	Headers     map[string]string
+	Credentials    Credentials
+	HTTP           transbank.HTTPClient
+	BaseURL        string
+	Headers        map[string]string
+	ValidateInputs bool
 }
 
-func NewConfig(commerceCode, apiKey, defaultBaseURL string) Config {
+func NewConfig(commerceCode, apiKey, defaultBaseURL string, validateInputs bool) Config {
 	return Config{
 		Credentials: Credentials{
 			ApiKey:       apiKey,
 			CommerceCode: commerceCode,
 		},
-		HTTP:    &http.Client{Timeout: 30 * time.Second},
-		BaseURL: defaultBaseURL,
+		HTTP:           &http.Client{Timeout: 30 * time.Second},
+		BaseURL:        defaultBaseURL,
+		ValidateInputs: validateInputs,
 	}
 }
 

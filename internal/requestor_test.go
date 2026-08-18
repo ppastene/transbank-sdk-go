@@ -42,7 +42,7 @@ func TestRequestorPostSendsHeadersAndDecodesBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     testCommerceCode,
 		"Tbk-Api-Key-Secret": testAPIKey,
@@ -81,7 +81,7 @@ func TestRequestorReturnsAPIErrorOnNonSuccess(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
 	requestor := NewRequestor(&cfg)
 
 	err := requestor.Get("/transactions", nil)
@@ -114,7 +114,7 @@ func (c *stubClient) Do(req *http.Request) (*http.Response, error) {
 
 func TestRequestorUsesInjectedHTTPClient(t *testing.T) {
 	client := &stubClient{}
-	cfg := NewConfig(testCommerceCode, testAPIKey, "https://webpay3gint.transbank.cl")
+	cfg := NewConfig(testCommerceCode, testAPIKey, "https://webpay3gint.transbank.cl", false)
 	cfg.HTTP = client
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     testCommerceCode,

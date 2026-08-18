@@ -17,7 +17,7 @@ Integration library for the Transbank API written in the Go language.
   - [Transaccion Completa](#transaccion-completa)
   - [Transaccion Completa Mall](#transaccion-completa-mall)
   - [PatPass](#patpass)
-- [Error handling](#error-handling)
+- [Error handling and validations](#error-handling-and-validations)
 - [HTTP client injection](#http-client-injection)
 - [Example project](#example-project)
 
@@ -64,6 +64,7 @@ opts := transbank.Options{
 	CommerceCode: "597055555532",         // your commerce code
 	ApiKey:       "579B532A7440BB0C9...", // your secret key
 	Environment:  transbank.Integration,  // or transbank.Production
+	// ValidateInputs: true,             // optional: enable input validations
 }
 
 tx, err := webpayplus.NewTransaction(opts)
@@ -487,7 +488,7 @@ _ = status.Authorized // true if the inscription was approved
 _ = status.VoucherUrl // voucher URL
 ```
 
-## Error handling
+## Error handling and validations
 
 The SDK returns typed errors that reflect where the operation failed, all
 distinguishable with `errors.As`:
@@ -495,6 +496,49 @@ distinguishable with `errors.As`:
 - `*transbank.ValidationError`: invalid parameters or credentials; the API was not called.
 - `*transbank.TransportError`: the request or response could not be completed (network, encoding, parsing). `Err` is the root cause.
 - `*transbank.HTTPError`: the Transbank API responded with a non-2xx status code. `StatusCode` and `Body` (raw response) help diagnose it.
+
+### Input validation
+
+The SDK includes validations for each method's parameters (length, format,
+required fields) that run before calling the Transbank API. These validations
+are **disabled by default** to be consistent with the other official Transbank
+SDKs (PHP, Java, Python), where validation is the server's responsibility.
+
+If you want the SDK to validate parameters before sending them, enable the
+`ValidateInputs` option in the connection options:
+
+```go
+opts := transbank.Options{
+	CommerceCode:   "597055555532",
+	ApiKey:         "579B532A7440BB0C9...",
+	Environment:    transbank.Integration,
+	ValidateInputs: true, // enable client-side validations
+}
+```
+
+When `ValidateInputs` is `true`, each method validates its parameters before
+making the HTTP request and returns a `*transbank.ValidationError` if any is
+invalid. This avoids unnecessary API calls.
+
+The validations that are enabled are:
+
+- **Commerce code**: numeric, 12 digits.
+- **Token**: exactly 64 characters.
+- **Buy order**: not empty, max 26 characters, alphanumeric format.
+- **Session ID**: not empty, max 61 characters.
+- **Amount**: greater than 0, max 2 decimal places.
+- **Return URL**: absolute URL format (http/https).
+- **Card number**: numeric, 16 digits.
+- **Card expiration date**: MM/YY format.
+- **CVV**: optional, max 4 numeric digits.
+- **Installments**: integer between 1 and 99.
+- **Username**: not empty, max 40 characters.
+- **Email**: not empty, max 100 characters, contains `@`.
+- **TbkUser**: not empty, max 40 characters.
+
+> **Note**: Credential validation (`Environment`, `CommerceCode`, `ApiKey`)
+> in the constructor always runs regardless of this flag, as it corresponds to
+> SDK configuration, not business data.
 
 ```go
 import (
