@@ -67,8 +67,8 @@ func TestTransactionCommitNoValidation(t *testing.T) {
 	}
 }
 
-func TestTransactionCommitNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
+func TestTransactionCommitTokenAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	tx, err := webpayplus.NewTransaction(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewTransaction: %v", err)
@@ -77,15 +77,9 @@ func TestTransactionCommitNoValidationAPIRejection(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	var tbErr *transbank.HTTPError
-	if !errors.As(err, &tbErr) {
-		t.Fatalf("error type = %T, want *transbank.HTTPError", err)
-	}
-	if tbErr.StatusCode != http.StatusBadRequest {
-		t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusBadRequest)
-	}
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (token validation must not hit API)", server.RequestCount())
 	}
 }
 
@@ -107,8 +101,8 @@ func TestTransactionStatusNoValidation(t *testing.T) {
 	}
 }
 
-func TestTransactionStatusNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
+func TestTransactionStatusTokenAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	tx, err := webpayplus.NewTransaction(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewTransaction: %v", err)
@@ -117,15 +111,9 @@ func TestTransactionStatusNoValidationAPIRejection(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	var tbErr *transbank.HTTPError
-	if !errors.As(err, &tbErr) {
-		t.Fatalf("error type = %T, want *transbank.HTTPError", err)
-	}
-	if tbErr.StatusCode != http.StatusBadRequest {
-		t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusBadRequest)
-	}
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (token validation must not hit API)", server.RequestCount())
 	}
 }
 

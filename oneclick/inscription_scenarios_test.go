@@ -59,17 +59,20 @@ func TestMallInscriptionFinishNoValidation(t *testing.T) {
 	}
 }
 
-func TestMallInscriptionFinishNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"bad request"}`)
+func TestMallInscriptionFinishTokenAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	ins, err := oneclick.NewMallInscription(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewMallInscription: %v", err)
 	}
 
 	_, err = ins.Finish("short-token")
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"bad request"}`)
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (token validation must not hit API)", server.RequestCount())
 	}
 }
 

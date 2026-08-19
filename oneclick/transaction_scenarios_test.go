@@ -59,17 +59,20 @@ func TestMallTransactionStatusNoValidation(t *testing.T) {
 	}
 }
 
-func TestMallTransactionStatusNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"bad request"}`)
+func TestMallTransactionStatusBuyOrderAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	tx, err := oneclick.NewMallTransaction(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewMallTransaction: %v", err)
 	}
 
 	_, err = tx.Status("")
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"bad request"}`)
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (buyOrder validation must not hit API)", server.RequestCount())
 	}
 }
 

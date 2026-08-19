@@ -56,16 +56,16 @@ func TestTransactionInstallmentsNoValidation(t *testing.T) {
 	}
 }
 
-func TestTransactionInstallmentsNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
+func TestTransactionInstallmentsTokenAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	tx, err := transaccioncompleta.NewTransaction(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewTransaction: %v", err)
 	}
 	_, err = tx.Installments("", 10)
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (token validation must not hit API)", server.RequestCount())
 	}
 }
 
@@ -87,16 +87,16 @@ func TestTransactionCommitNoValidation(t *testing.T) {
 	}
 }
 
-func TestTransactionCommitNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
+func TestTransactionCommitTokenAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	tx, err := transaccioncompleta.NewTransaction(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewTransaction: %v", err)
 	}
 	_, err = tx.Commit("", nil, nil, nil)
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (token validation must not hit API)", server.RequestCount())
 	}
 }
 
@@ -118,16 +118,16 @@ func TestTransactionStatusNoValidation(t *testing.T) {
 	}
 }
 
-func TestTransactionStatusNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
+func TestTransactionStatusTokenAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	tx, err := transaccioncompleta.NewTransaction(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewTransaction: %v", err)
 	}
 	_, err = tx.Status("")
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (token validation must not hit API)", server.RequestCount())
 	}
 }
 
@@ -149,16 +149,16 @@ func TestTransactionRefundNoValidation(t *testing.T) {
 	}
 }
 
-func TestTransactionRefundNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
+func TestTransactionRefundTokenAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	tx, err := transaccioncompleta.NewTransaction(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewTransaction: %v", err)
 	}
 	_, err = tx.Refund("", 1000)
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (token validation must not hit API)", server.RequestCount())
 	}
 }
 
@@ -180,15 +180,15 @@ func TestTransactionCaptureNoValidation(t *testing.T) {
 	}
 }
 
-func TestTransactionCaptureNoValidationAPIRejection(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
+func TestTransactionCaptureTokenAlwaysValidated(t *testing.T) {
+	server := newMockServer(t, http.StatusOK, `{}`)
 	tx, err := transaccioncompleta.NewTransaction(testOptionsNoValidation(server))
 	if err != nil {
 		t.Fatalf("NewTransaction: %v", err)
 	}
 	_, err = tx.Capture("", testBuyOrder, testAuthCode, 1000)
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"invalid parameter"}`)
-	if server.RequestCount() != 1 {
-		t.Errorf("request count = %d, want 1 (API must be called when validation is off)", server.RequestCount())
+	wantValidationError(t, err)
+	if server.RequestCount() != 0 {
+		t.Errorf("request count = %d, want 0 (token validation must not hit API)", server.RequestCount())
 	}
 }
