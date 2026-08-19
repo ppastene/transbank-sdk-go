@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"strings"
+	"math"
 	"testing"
 
 	"github.com/ppastene/transbank-sdk-go"
@@ -385,5 +386,37 @@ func TestValidateInstallmentsNumber(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+func TestValidateAmountEdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		amount  float64
+		wantErr bool
+	}{
+		{name: "NaN", amount: math.NaN(), wantErr: true},
+		{name: "+Inf", amount: math.Inf(1), wantErr: true},
+		{name: "-Inf", amount: math.Inf(-1), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateAmount(tt.amount)
+			if tt.wantErr {
+				if err := validationErr(t, err); err.Message == "" {
+					t.Error("expected non-empty validation message")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateCardNumberShort(t *testing.T) {
+	if err := ValidateCardNumber("4"); err != nil {
+		t.Errorf("short numeric card number should be accepted: %v", err)
 	}
 }

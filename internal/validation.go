@@ -60,6 +60,9 @@ func ValidateSessionID(sessionID string) error {
 }
 
 func ValidateAmount(amount float64) error {
+	if math.IsNaN(amount) || math.IsInf(amount, 0) {
+		return &transbank.ValidationError{Message: "amount must be a valid number"}
+	}
 	if amount <= 0 {
 		return &transbank.ValidationError{Message: "amount must be greater than zero"}
 	}
