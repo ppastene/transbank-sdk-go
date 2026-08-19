@@ -107,10 +107,8 @@ func validateMallDetails(details []MallDetails, validateInputs bool) error {
 // Status returns the current state of a transaction identified by its buy
 // order, including one detail per store.
 func (m *MallTransaction) Status(buyOrder string) (*OneclickMallTransactionStatusResponse, error) {
-	if m.config.ValidateInputs {
-		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-			return nil, err
-		}
+	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+		return nil, err
 	}
 	var response OneclickMallTransactionStatusResponse
 	if err := internal.NewRequestor(&m.config).Get(fmt.Sprintf("%s/transactions/%s", oneClickPath, buyOrder), &response); err != nil {
@@ -123,10 +121,10 @@ func (m *MallTransaction) Status(buyOrder string) (*OneclickMallTransactionStatu
 // order, the store commerce code and its buy order, for the specified amount.
 // The refund type is either "NULLIFY" or "REVERSED".
 func (m *MallTransaction) Refund(buyOrder, childCommerceCode, childBuyOrder string, amount float64) (*OneclickMallTransactionRefundResponse, error) {
+	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
+		return nil, err
+	}
 	if m.config.ValidateInputs {
-		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-			return nil, err
-		}
 		if err := internal.ValidateCommerceCode(childCommerceCode); err != nil {
 			return nil, err
 		}

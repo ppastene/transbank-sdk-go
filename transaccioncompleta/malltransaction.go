@@ -114,10 +114,10 @@ func (m *MallTransaction) Create(buyOrder, sessionId, cardNumber, cardExpiration
 // by its token, with one query detail per store. It returns the deferred
 // periods when available.
 func (m *MallTransaction) Installments(token string, details []MallInstallmentsDetails) (*MallTransactionInstallmentsResponse, error) {
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
+	}
 	if m.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
 		if err := validateMallInstallmentsDetails(details, m.config.ValidateInputs); err != nil {
 			return nil, err
 		}
@@ -133,10 +133,10 @@ func (m *MallTransaction) Installments(token string, details []MallInstallmentsD
 // token, authorizing the payment of all its details. Each detail's optional
 // fields are only sent when not nil.
 func (m *MallTransaction) Commit(token string, details []MallCommitDetails) (*MallTransactionCommitResponse, error) {
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
+	}
 	if m.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
 		if err := validateMallCommitDetails(details, m.config.ValidateInputs); err != nil {
 			return nil, err
 		}
@@ -154,10 +154,8 @@ func (m *MallTransaction) Commit(token string, details []MallCommitDetails) (*Ma
 // Status returns the current state of a mall transaction identified by its
 // token, including one detail per store.
 func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, error) {
-	if m.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
 	}
 	var response MallTransactionStatusResponse
 	if err := internal.NewRequestor(&m.config).Get(fmt.Sprintf("%s/%s", transactionsPath, token), &response); err != nil {
@@ -170,10 +168,10 @@ func (m *MallTransaction) Status(token string) (*MallTransactionStatusResponse, 
 // transaction token, the store buy order and its commerce code, for the
 // specified amount. The refund type is either "NULLIFY" or "REVERSED".
 func (m *MallTransaction) Refund(token, buyOrder, commerceCode string, amount float64) (*MallTransactionRefundResponse, error) {
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
+	}
 	if m.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
 		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
 			return nil, err
 		}
@@ -201,10 +199,10 @@ func (m *MallTransaction) Refund(token, buyOrder, commerceCode string, amount fl
 // and the authorization code obtained after Commit. Only available in
 // environments with deferred capture enabled.
 func (m *MallTransaction) Capture(token, commerceCode, buyOrder, authorizationCode string, captureAmount float64) (*MallTransactionCaptureResponse, error) {
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
+	}
 	if m.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
 		if err := internal.ValidateCommerceCode(commerceCode); err != nil {
 			return nil, err
 		}

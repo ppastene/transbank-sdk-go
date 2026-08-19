@@ -80,10 +80,8 @@ func (t *Transaction) Create(buyOrder, sessionId string, amount float64, returnU
 // Commit confirms a previously created transaction identified by its token,
 // authorizing the payment. It returns the authorization details.
 func (t *Transaction) Commit(token string) (*TransactionCommitResponse, error) {
-	if t.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
 	}
 	var response TransactionCommitResponse
 	if err := internal.NewRequestor(&t.config).Put(fmt.Sprintf("%s/%s", transactionsPath, token), nil, &response); err != nil {
@@ -94,10 +92,8 @@ func (t *Transaction) Commit(token string) (*TransactionCommitResponse, error) {
 
 // Status returns the current state of a transaction identified by its token.
 func (t *Transaction) Status(token string) (*TransactionStatusResponse, error) {
-	if t.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
 	}
 	var response TransactionStatusResponse
 	if err := internal.NewRequestor(&t.config).Get(fmt.Sprintf("%s/%s", transactionsPath, token), &response); err != nil {
@@ -110,10 +106,10 @@ func (t *Transaction) Status(token string) (*TransactionStatusResponse, error) {
 // partially, for the specified amount. The refund type is either "NULLIFY" or
 // "REVERSED".
 func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundResponse, error) {
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
+	}
 	if t.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
 		if err := internal.ValidateAmount(amount); err != nil {
 			return nil, err
 		}
@@ -132,10 +128,10 @@ func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundRe
 // using the buy order and authorization code obtained after Commit. Only
 // available in environments with deferred capture enabled.
 func (t *Transaction) Capture(token, buyOrder, authorizationCode string, captureAmount float64) (*TransactionCaptureResponse, error) {
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
+	}
 	if t.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
 		if err := internal.ValidateBuyOrder(buyOrder); err != nil {
 			return nil, err
 		}

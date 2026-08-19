@@ -77,10 +77,8 @@ func (m *MallInscription) Start(username, email, responseUrl string) (*OneclickM
 // the tbk_user identifier of the enrolled card. The token is the one received
 // by Transbank in the return URL (TBK_TOKEN).
 func (m *MallInscription) Finish(token string) (*OneclickMallInscriptionFinishResponse, error) {
-	if m.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
+	if err := internal.ValidateToken(token); err != nil {
+		return nil, err
 	}
 	var response OneclickMallInscriptionFinishResponse
 	if err := internal.NewRequestor(&m.config).Put(fmt.Sprintf("%s/inscriptions/%s", oneClickPath, token), map[string]any{}, &response); err != nil {
