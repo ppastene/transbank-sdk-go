@@ -2,64 +2,13 @@ package webpayplus_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/ppastene/transbank-sdk-go"
 	"github.com/ppastene/transbank-sdk-go/webpayplus"
 )
-
-func TestNewMallTransaction(t *testing.T) {
-	tests := []struct {
-		name string
-		opts transbank.Options
-		want *transbank.ValidationError
-	}{
-		{
-			name: "valid",
-			opts: transbank.Options{
-				CommerceCode: "597055555535",
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-		},
-		{
-			name: "short commerce code",
-			opts: transbank.Options{
-				CommerceCode: "5970",
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "empty api key",
-			opts: transbank.Options{
-				CommerceCode: "597055555535",
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mt, err := webpayplus.NewMallTransaction(tt.opts)
-			if tt.want != nil {
-				wantValidationError(t, err)
-				if mt != nil {
-					t.Error("expected nil MallTransaction on error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("NewMallTransaction returned error: %v", err)
-			}
-			if mt == nil {
-				t.Error("expected non-nil MallTransaction")
-			}
-		})
-	}
-}
 
 func TestMallTransactionCreate(t *testing.T) {
 	server := newMockServer(t, http.StatusOK, `{"token":"tok_mall","url":"https://webpay.cl/pagar/tok_mall"}`)
@@ -212,36 +161,61 @@ func TestMallTransactionCapture(t *testing.T) {
 	}
 }
 
-func TestMallTransactionDetailsValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	mt, err := webpayplus.NewMallTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
-	}
-
-	validDetail := webpayplus.MallDetails{Amount: 10000, CommerceCode: testChildCode1, BuyOrder: "orden-detalle-1"}
-
+func TestMallTransactionHTTPError(t *testing.T) {
 	tests := []struct {
-		name    string
-		details []webpayplus.MallDetails
+		name   string
+		method func(mt *webpayplus.MallTransaction) error
 	}{
-		{name: "empty details", details: nil},
-		{name: "zero amount", details: []webpayplus.MallDetails{{Amount: 0, CommerceCode: testChildCode1, BuyOrder: "orden-detalle-1"}}},
-		{name: "short detail commerce code", details: []webpayplus.MallDetails{{Amount: 10000, CommerceCode: "5970", BuyOrder: "orden-detalle-1"}}},
-		{name: "empty detail buy order", details: []webpayplus.MallDetails{{Amount: 10000, CommerceCode: testChildCode1, BuyOrder: ""}}},
+		{
+			name: "commit",
+			method: func(mt *webpayplus.MallTransaction) error {
+				_, err := mt.Commit(testToken)
+				return err
+			},
+		},
+		{
+			name: "status",
+			method: func(mt *webpayplus.MallTransaction) error {
+				_, err := mt.Status(testToken)
+				return err
+			},
+		},
+		{
+			name: "refund",
+			method: func(mt *webpayplus.MallTransaction) error {
+				_, err := mt.Refund(testToken, "orden-detalle-1", testChildCode1, 10000)
+				return err
+			},
+		},
+		{
+			name: "capture",
+			method: func(mt *webpayplus.MallTransaction) error {
+				_, err := mt.Capture(testToken, testChildCode1, "orden-detalle-1", testAuthCode, 10000)
+				return err
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := mt.Create(testBuyOrder, testSessionID, testReturnURL, tt.details); err == nil {
-				t.Error("expected error, got nil")
+			server := newMockServer(t, http.StatusUnauthorized, `{"error_message":"unauthorized"}`)
+			mt, err := webpayplus.NewMallTransaction(testOptions(server))
+			if err != nil {
+				t.Fatalf("NewMallTransaction: %v", err)
+			}
+			err = tt.method(mt)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			var tbErr *transbank.HTTPError
+			if !errors.As(err, &tbErr) {
+				t.Fatalf("error type = %T, want *transbank.HTTPError", err)
+			}
+			if tbErr.StatusCode != http.StatusUnauthorized {
+				t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusUnauthorized)
+			}
+			if tbErr.Body != `{"error_message":"unauthorized"}` {
+				t.Errorf("Body = %q, want raw response", tbErr.Body)
 			}
 		})
-	}
-
-	if _, err := mt.Create(testBuyOrder, testSessionID, testReturnURL, []webpayplus.MallDetails{validDetail}); err != nil {
-		t.Errorf("valid details rejected: %v", err)
-	}
-	if got := server.RequestCount(); got != 1 {
-		t.Errorf("request count = %d, want 1 (only the valid call reaches the API)", got)
 	}
 }

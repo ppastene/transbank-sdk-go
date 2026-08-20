@@ -2,6 +2,7 @@ package transbank
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -58,7 +59,7 @@ func TestErrorString(t *testing.T) {
 		{
 			name: "transport error",
 			err:  &TransportError{Message: "request failed", Err: errors.New("dial tcp: refused")},
-			want: "request failed",
+			want: "request failed: dial tcp: refused",
 		},
 		{
 			name: "http error with body",
@@ -88,5 +89,53 @@ func TestErrorUnwrap(t *testing.T) {
 	}
 	if !errors.Is(err, cause) {
 		t.Error("errors.Is(err, cause) = false, want true")
+	}
+}
+
+func TestTransportErrorUnwrapChain(t *testing.T) {
+	cause := errors.New("connection refused")
+	inner := &TransportError{Message: "request failed", Err: cause}
+	outer := fmt.Errorf("outer: %w", inner)
+
+	var tbErr *TransportError
+	if !errors.As(outer, &tbErr) {
+		t.Fatal("errors.As should find TransportError in chain")
+	}
+	if tbErr.Message != "request failed" {
+		t.Errorf("Message = %q, want request failed", tbErr.Message)
+	}
+	if !errors.Is(outer, cause) {
+		t.Error("errors.Is should find root cause in chain")
+	}
+}
+
+func TestHTTPErrorBodyTrimming(t *testing.T) {
+	tests := []struct {
+		name string
+		err  *HTTPError
+		want string
+	}{
+		{
+			name: "multiline body",
+			err:  &HTTPError{StatusCode: 400, Body: "{\n  \"error\": \"bad\"\n}"},
+			want: "transbank: status 400: {\n  \"error\": \"bad\"\n}",
+		},
+		{
+			name: "whitespace only body",
+			err:  &HTTPError{StatusCode: 401, Body: "  \n  "},
+			want: "transbank: status 401: ",
+		},
+		{
+			name: "body with leading trailing spaces",
+			err:  &HTTPError{StatusCode: 500, Body: "  server error  "},
+			want: "transbank: status 500: server error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.err.Error(); got != tt.want {
+				t.Errorf("Error() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

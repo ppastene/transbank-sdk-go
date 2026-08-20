@@ -2,89 +2,13 @@ package oneclick_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/ppastene/transbank-sdk-go"
 	"github.com/ppastene/transbank-sdk-go/oneclick"
 )
-
-func TestNewMallInscription(t *testing.T) {
-	tests := []struct {
-		name string
-		opts transbank.Options
-		want *transbank.ValidationError
-	}{
-		{
-			name: "valid integration",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-		},
-		{
-			name: "valid production",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Production,
-			},
-		},
-		{
-			name: "invalid environment",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Environment(99),
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "empty commerce code",
-			opts: transbank.Options{
-				ApiKey:      testAPIKey,
-				Environment: transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "short commerce code",
-			opts: transbank.Options{
-				CommerceCode: "5970",
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "empty api key",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ins, err := oneclick.NewMallInscription(tt.opts)
-			if tt.want != nil {
-				wantValidationError(t, err)
-				if ins != nil {
-					t.Error("expected nil MallInscription on error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("NewMallInscription returned error: %v", err)
-			}
-			if ins == nil {
-				t.Error("expected non-nil MallInscription")
-			}
-		})
-	}
-}
 
 func TestMallInscriptionStart(t *testing.T) {
 	server := newMockServer(t, http.StatusOK, `{"token":"`+testToken+`","url_webpay":"https://webpay.cl/form_inscription"}`)
@@ -177,46 +101,52 @@ func TestMallInscriptionDelete(t *testing.T) {
 }
 
 func TestMallInscriptionHTTPError(t *testing.T) {
-	server := newMockServer(t, http.StatusUnauthorized, `{"error_message":"unauthorized"}`)
-	ins, err := oneclick.NewMallInscription(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallInscription: %v", err)
+	tests := []struct {
+		name   string
+		method func(ins *oneclick.MallInscription) error
+	}{
+		{
+			name: "start",
+			method: func(ins *oneclick.MallInscription) error {
+				_, err := ins.Start(testUsername, testEmail, testResponseURL)
+				return err
+			},
+		},
+		{
+			name: "finish",
+			method: func(ins *oneclick.MallInscription) error {
+				_, err := ins.Finish(testToken)
+				return err
+			},
+		},
+		{
+			name: "delete",
+			method: func(ins *oneclick.MallInscription) error {
+				return ins.Delete(testTbkUser, testUsername)
+			},
+		},
 	}
-
-	_, err = ins.Finish(testToken)
-	wantHTTPError(t, err, http.StatusUnauthorized, `{"error_message":"unauthorized"}`)
-}
-
-func TestMallInscriptionValidationSkipsRequest(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	ins, err := oneclick.NewMallInscription(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallInscription: %v", err)
-	}
-
-	if _, err := ins.Start("", testEmail, testResponseURL); err == nil {
-		t.Error("expected error for empty username")
-	}
-	if _, err := ins.Start(testUsername, "", testResponseURL); err == nil {
-		t.Error("expected error for empty email")
-	}
-	if _, err := ins.Start(testUsername, "correo-sin-arroba", testResponseURL); err == nil {
-		t.Error("expected error for email without @")
-	}
-	if _, err := ins.Start(testUsername, testEmail, "not-a-url"); err == nil {
-		t.Error("expected error for relative response_url")
-	}
-	if _, err := ins.Finish("short-token"); err == nil {
-		t.Error("expected error for invalid token")
-	}
-	if err := ins.Delete("", testUsername); err == nil {
-		t.Error("expected error for empty tbk_user")
-	}
-	if err := ins.Delete(testTbkUser, ""); err == nil {
-		t.Error("expected error for empty username")
-	}
-
-	if got := server.RequestCount(); got != 0 {
-		t.Errorf("request count = %d, want 0 (validation must not hit the API)", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(t, http.StatusUnauthorized, `{"error_message":"unauthorized"}`)
+			ins, err := oneclick.NewMallInscription(testOptions(server))
+			if err != nil {
+				t.Fatalf("NewMallInscription: %v", err)
+			}
+			err = tt.method(ins)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			var tbErr *transbank.HTTPError
+			if !errors.As(err, &tbErr) {
+				t.Fatalf("error type = %T, want *transbank.HTTPError", err)
+			}
+			if tbErr.StatusCode != http.StatusUnauthorized {
+				t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusUnauthorized)
+			}
+			if tbErr.Body != `{"error_message":"unauthorized"}` {
+				t.Errorf("Body = %q, want raw response", tbErr.Body)
+			}
+		})
 	}
 }

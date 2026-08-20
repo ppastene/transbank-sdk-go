@@ -9,6 +9,8 @@ import (
 	"github.com/ppastene/transbank-sdk-go/internal"
 )
 
+const pkg = "webpayplus"
+
 const transactionsPath = "/rswebpaytransaction/api/webpay/v1.2/transactions"
 
 // Transaction provides access to the Webpay Plus API for a single store.
@@ -18,13 +20,9 @@ type Transaction struct {
 }
 
 // NewTransaction returns a Transaction for the given options. It validates the
-// options and the commerce code and returns a *transbank.ValidationError on
-// failure.
+// options and returns a *transbank.ValidationError on failure.
 func NewTransaction(opts transbank.Options) (*Transaction, error) {
 	if err := opts.Validate(); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCommerceCode(opts.CommerceCode); err != nil {
 		return nil, err
 	}
 	baseURL := internal.INTEGRATION_URL
@@ -47,19 +45,6 @@ func NewTransaction(opts transbank.Options) (*Transaction, error) {
 // form to which the customer must be redirected. The return URL is where
 // Transbank redirects the customer after payment.
 func (t *Transaction) Create(buyOrder, sessionId string, amount float64, returnUrl string) (*TransactionCreateResponse, error) {
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateSessionID(sessionId); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(amount); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateReturnURL(returnUrl); err != nil {
-		return nil, err
-	}
-
 	payload := map[string]any{
 		"buy_order":  buyOrder,
 		"session_id": sessionId,
@@ -68,7 +53,7 @@ func (t *Transaction) Create(buyOrder, sessionId string, amount float64, returnU
 	}
 	var response TransactionCreateResponse
 	if err := internal.NewRequestor(&t.config).Post(transactionsPath, payload, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s create: %w", pkg, err)
 	}
 	return &response, nil
 }
@@ -76,24 +61,24 @@ func (t *Transaction) Create(buyOrder, sessionId string, amount float64, returnU
 // Commit confirms a previously created transaction identified by its token,
 // authorizing the payment. It returns the authorization details.
 func (t *Transaction) Commit(token string) (*TransactionCommitResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
+	if err := internal.ValidateURLParam("token", token, 64); err != nil {
 		return nil, err
 	}
 	var response TransactionCommitResponse
 	if err := internal.NewRequestor(&t.config).Put(fmt.Sprintf("%s/%s", transactionsPath, token), nil, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s commit: %w", pkg, err)
 	}
 	return &response, nil
 }
 
 // Status returns the current state of a transaction identified by its token.
 func (t *Transaction) Status(token string) (*TransactionStatusResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
+	if err := internal.ValidateURLParam("token", token, 64); err != nil {
 		return nil, err
 	}
 	var response TransactionStatusResponse
 	if err := internal.NewRequestor(&t.config).Get(fmt.Sprintf("%s/%s", transactionsPath, token), &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s status: %w", pkg, err)
 	}
 	return &response, nil
 }
@@ -102,10 +87,7 @@ func (t *Transaction) Status(token string) (*TransactionStatusResponse, error) {
 // partially, for the specified amount. The refund type is either "NULLIFY" or
 // "REVERSED".
 func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(amount); err != nil {
+	if err := internal.ValidateURLParam("token", token, 64); err != nil {
 		return nil, err
 	}
 	payload := map[string]float64{
@@ -113,7 +95,7 @@ func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundRe
 	}
 	var response TransactionRefundResponse
 	if err := internal.NewRequestor(&t.config).Post(fmt.Sprintf("%s/%s/refunds", transactionsPath, token), payload, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s refund: %w", pkg, err)
 	}
 	return &response, nil
 }
@@ -122,13 +104,7 @@ func (t *Transaction) Refund(token string, amount float64) (*TransactionRefundRe
 // using the buy order and authorization code obtained after Commit. Only
 // available in environments with deferred capture enabled.
 func (t *Transaction) Capture(token, buyOrder, authorizationCode string, captureAmount float64) (*TransactionCaptureResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateBuyOrder(buyOrder); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateAmount(captureAmount); err != nil {
+	if err := internal.ValidateURLParam("token", token, 64); err != nil {
 		return nil, err
 	}
 	payload := map[string]any{
@@ -138,7 +114,7 @@ func (t *Transaction) Capture(token, buyOrder, authorizationCode string, capture
 	}
 	var response TransactionCaptureResponse
 	if err := internal.NewRequestor(&t.config).Put(fmt.Sprintf("%s/%s/capture", transactionsPath, token), payload, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s capture: %w", pkg, err)
 	}
 	return &response, nil
 }

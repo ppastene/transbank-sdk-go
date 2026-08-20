@@ -17,7 +17,7 @@ Librería de integración con la API de Transbank escrita en el lenguaje Go.
   - [Transacción Completa](#transacción-completa)
   - [Transacción Completa Mall](#transacción-completa-mall)
   - [PatPass](#patpass)
-- [Manejo de errores](#manejo-de-errores)
+- [Manejo de errores y validaciones](#manejo-de-errores-y-validaciones)
 - [Inyección de cliente HTTP](#inyección-de-cliente-http)
 - [Proyecto de ejemplo](#proyecto-de-ejemplo)
 
@@ -64,6 +64,7 @@ opts := transbank.Options{
 	CommerceCode: "597055555532",         // su código de comercio
 	ApiKey:       "579B532A7440BB0C9...", // su llave secreta
 	Environment:  transbank.Integration,  // o transbank.Production
+	// ValidateInputs: true,             // opcional: activar validaciones de parámetros
 }
 
 tx, err := webpayplus.NewTransaction(opts)
@@ -487,7 +488,7 @@ _ = status.Authorized // true si la inscripción fue aprobada
 _ = status.VoucherUrl // URL del voucher
 ```
 
-## Manejo de errores
+## Manejo de errores y validaciones
 
 El SDK devuelve errores tipados que reflejan dónde falló la operación, todos
 discriminables con `errors.As`:
@@ -495,6 +496,10 @@ discriminables con `errors.As`:
 - `*transbank.ValidationError`: parámetros o credenciales inválidas; la API no se llamó.
 - `*transbank.TransportError`: no se pudo completar el request o procesar la respuesta (red, encoding, parsing). `Err` es la causa raíz.
 - `*transbank.HTTPError`: la API de Transbank respondió con un código distinto de 2xx. `StatusCode` y `Body` (respuesta cruda) permiten diagnosticar.
+
+### Validación de inputs
+
+La validación de credenciales (`Environment`, `CommerceCode`, `ApiKey`) y ciertos parametros son validados por el SDK antes de llamar a la API para evitar errores en la petición HTTP.
 
 ```go
 import (

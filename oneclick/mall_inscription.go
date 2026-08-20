@@ -18,13 +18,9 @@ type MallInscription struct {
 }
 
 // NewMallInscription returns a MallInscription for the given options. It
-// validates the options and the commerce code and returns a
-// *transbank.ValidationError on failure.
+// validates the options and returns a *transbank.ValidationError on failure.
 func NewMallInscription(opts transbank.Options) (*MallInscription, error) {
 	if err := opts.Validate(); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateCommerceCode(opts.CommerceCode); err != nil {
 		return nil, err
 	}
 	baseURL := internal.INTEGRATION_URL
@@ -47,16 +43,6 @@ func NewMallInscription(opts transbank.Options) (*MallInscription, error) {
 // must be redirected. The response URL is where Transbank redirects the
 // customer after the inscription flow.
 func (m *MallInscription) Start(username, email, responseUrl string) (*OneclickMallInscriptionStartResponse, error) {
-	if err := internal.ValidateUsername(username); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateEmail(email); err != nil {
-		return nil, err
-	}
-	if err := internal.ValidateReturnURL(responseUrl); err != nil {
-		return nil, err
-	}
-
 	payload := map[string]string{
 		"username":     username,
 		"email":        email,
@@ -64,7 +50,7 @@ func (m *MallInscription) Start(username, email, responseUrl string) (*OneclickM
 	}
 	var response OneclickMallInscriptionStartResponse
 	if err := internal.NewRequestor(&m.config).Post(oneClickPath+"/inscriptions", payload, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("oneclick inscription start: %w", err)
 	}
 	return &response, nil
 }
@@ -73,12 +59,12 @@ func (m *MallInscription) Start(username, email, responseUrl string) (*OneclickM
 // the tbk_user identifier of the enrolled card. The token is the one received
 // by Transbank in the return URL (TBK_TOKEN).
 func (m *MallInscription) Finish(token string) (*OneclickMallInscriptionFinishResponse, error) {
-	if err := internal.ValidateToken(token); err != nil {
+	if err := internal.ValidateURLParam("token", token, 64); err != nil {
 		return nil, err
 	}
 	var response OneclickMallInscriptionFinishResponse
 	if err := internal.NewRequestor(&m.config).Put(fmt.Sprintf("%s/inscriptions/%s", oneClickPath, token), map[string]any{}, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("oneclick inscription finish: %w", err)
 	}
 	return &response, nil
 }
@@ -86,15 +72,12 @@ func (m *MallInscription) Finish(token string) (*OneclickMallInscriptionFinishRe
 // Delete removes a previously enrolled card for the given user. It returns an
 // error if the removal fails; the API returns no response body on success.
 func (m *MallInscription) Delete(tbkUser, username string) error {
-	if err := internal.ValidateTbkUser(tbkUser); err != nil {
-		return err
-	}
-	if err := internal.ValidateUsername(username); err != nil {
-		return err
-	}
 	payload := map[string]string{
 		"username": username,
 		"tbk_user": tbkUser,
 	}
-	return internal.NewRequestor(&m.config).Delete(oneClickPath+"/inscriptions", payload, nil)
+	if err := internal.NewRequestor(&m.config).Delete(oneClickPath+"/inscriptions", payload, nil); err != nil {
+		return fmt.Errorf("oneclick inscription delete: %w", err)
+	}
+	return nil
 }

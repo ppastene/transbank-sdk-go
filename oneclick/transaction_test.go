@@ -2,81 +2,13 @@ package oneclick_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/ppastene/transbank-sdk-go"
 	"github.com/ppastene/transbank-sdk-go/oneclick"
 )
-
-func TestNewMallTransaction(t *testing.T) {
-	tests := []struct {
-		name string
-		opts transbank.Options
-		want *transbank.ValidationError
-	}{
-		{
-			name: "valid integration",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-		},
-		{
-			name: "valid production",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Production,
-			},
-		},
-		{
-			name: "invalid environment",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Environment(99),
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "non numeric commerce code",
-			opts: transbank.Options{
-				CommerceCode: "59705555553a",
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "empty api key",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tx, err := oneclick.NewMallTransaction(tt.opts)
-			if tt.want != nil {
-				wantValidationError(t, err)
-				if tx != nil {
-					t.Error("expected nil MallTransaction on error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("NewMallTransaction returned error: %v", err)
-			}
-			if tx == nil {
-				t.Error("expected non-nil MallTransaction")
-			}
-		})
-	}
-}
 
 func testDetails() []oneclick.MallDetails {
 	return []oneclick.MallDetails{
@@ -255,58 +187,60 @@ func TestMallTransactionCapture(t *testing.T) {
 }
 
 func TestMallTransactionHTTPError(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"bad request"}`)
-	tx, err := oneclick.NewMallTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
+	tests := []struct {
+		name   string
+		method func(tx *oneclick.MallTransaction) error
+	}{
+		{
+			name: "authorize",
+			method: func(tx *oneclick.MallTransaction) error {
+				_, err := tx.Authorize(testUsername, testTbkUser, testBuyOrder, testDetails())
+				return err
+			},
+		},
+		{
+			name: "status",
+			method: func(tx *oneclick.MallTransaction) error {
+				_, err := tx.Status(testBuyOrder)
+				return err
+			},
+		},
+		{
+			name: "refund",
+			method: func(tx *oneclick.MallTransaction) error {
+				_, err := tx.Refund(testBuyOrder, testChildCode1, testChildBuyOrder, 10000)
+				return err
+			},
+		},
+		{
+			name: "capture",
+			method: func(tx *oneclick.MallTransaction) error {
+				_, err := tx.Capture(testBuyOrder, testCaptureCode, testAuthCode, 50)
+				return err
+			},
+		},
 	}
-
-	_, err = tx.Status(testBuyOrder)
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"bad request"}`)
-}
-
-func TestMallTransactionValidationSkipsRequest(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := oneclick.NewMallTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
-	}
-
-	if _, err := tx.Authorize("", testTbkUser, testBuyOrder, testDetails()); err == nil {
-		t.Error("expected error for empty username")
-	}
-	if _, err := tx.Authorize(testUsername, "", testBuyOrder, testDetails()); err == nil {
-		t.Error("expected error for empty tbk_user")
-	}
-	if _, err := tx.Authorize(testUsername, testTbkUser, "", testDetails()); err == nil {
-		t.Error("expected error for empty buy_order")
-	}
-	if _, err := tx.Authorize(testUsername, testTbkUser, testBuyOrder, nil); err == nil {
-		t.Error("expected error for empty details")
-	}
-	if _, err := tx.Authorize(testUsername, testTbkUser, testBuyOrder, []oneclick.MallDetails{{Amount: 100, CommerceCode: "bad", BuyOrder: testChildBuyOrder}}); err == nil {
-		t.Error("expected error for invalid child commerce code")
-	}
-	if _, err := tx.Authorize(testUsername, testTbkUser, testBuyOrder, []oneclick.MallDetails{{Amount: 0, CommerceCode: testChildCode1, BuyOrder: testChildBuyOrder}}); err == nil {
-		t.Error("expected error for zero amount")
-	}
-	if _, err := tx.Authorize(testUsername, testTbkUser, testBuyOrder, []oneclick.MallDetails{{Amount: 100, CommerceCode: testChildCode1, BuyOrder: testChildBuyOrder, InstallmentsNumber: 100}}); err == nil {
-		t.Error("expected error for invalid installments_number")
-	}
-	if _, err := tx.Status(""); err == nil {
-		t.Error("expected error for empty buy_order")
-	}
-	if _, err := tx.Refund(testBuyOrder, "bad", testChildBuyOrder, 100); err == nil {
-		t.Error("expected error for invalid child commerce code")
-	}
-	if _, err := tx.Refund(testBuyOrder, testChildCode1, testChildBuyOrder, 0); err == nil {
-		t.Error("expected error for zero refund amount")
-	}
-	if _, err := tx.Capture(testBuyOrder, testCaptureCode, "", 50); err == nil {
-		t.Error("expected error for empty authorization_code")
-	}
-
-	if got := server.RequestCount(); got != 0 {
-		t.Errorf("request count = %d, want 0 (validation must not hit the API)", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(t, http.StatusBadRequest, `{"error_message":"bad request"}`)
+			tx, err := oneclick.NewMallTransaction(testOptions(server))
+			if err != nil {
+				t.Fatalf("NewMallTransaction: %v", err)
+			}
+			err = tt.method(tx)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			var tbErr *transbank.HTTPError
+			if !errors.As(err, &tbErr) {
+				t.Fatalf("error type = %T, want *transbank.HTTPError", err)
+			}
+			if tbErr.StatusCode != http.StatusBadRequest {
+				t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusBadRequest)
+			}
+			if tbErr.Body != `{"error_message":"bad request"}` {
+				t.Errorf("Body = %q, want raw response", tbErr.Body)
+			}
+		})
 	}
 }

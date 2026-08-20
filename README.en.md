@@ -17,7 +17,7 @@ Integration library for the Transbank API written in the Go language.
   - [Transaccion Completa](#transaccion-completa)
   - [Transaccion Completa Mall](#transaccion-completa-mall)
   - [PatPass](#patpass)
-- [Error handling](#error-handling)
+- [Error handling and validations](#error-handling-and-validations)
 - [HTTP client injection](#http-client-injection)
 - [Example project](#example-project)
 
@@ -64,6 +64,7 @@ opts := transbank.Options{
 	CommerceCode: "597055555532",         // your commerce code
 	ApiKey:       "579B532A7440BB0C9...", // your secret key
 	Environment:  transbank.Integration,  // or transbank.Production
+	// ValidateInputs: true,             // optional: enable input validations
 }
 
 tx, err := webpayplus.NewTransaction(opts)
@@ -487,7 +488,7 @@ _ = status.Authorized // true if the inscription was approved
 _ = status.VoucherUrl // voucher URL
 ```
 
-## Error handling
+## Error handling and validations
 
 The SDK returns typed errors that reflect where the operation failed, all
 distinguishable with `errors.As`:
@@ -495,6 +496,12 @@ distinguishable with `errors.As`:
 - `*transbank.ValidationError`: invalid parameters or credentials; the API was not called.
 - `*transbank.TransportError`: the request or response could not be completed (network, encoding, parsing). `Err` is the root cause.
 - `*transbank.HTTPError`: the Transbank API responded with a non-2xx status code. `StatusCode` and `Body` (raw response) help diagnose it.
+
+### Input validation
+
+The SDK includes validations for each method's parameters (length, format, required fields) that run before calling the Transbank API. These validations are **disabled by default** to be consistent with the other official Transbank SDKs (PHP, Java, Python), where validation is the server's responsibility.
+
+The validation of credentials (`Environment`, `CommerceCode`, `ApiKey`) and certain parameters are validated before the API call to avoid problems on the HTTP request.
 
 ```go
 import (
