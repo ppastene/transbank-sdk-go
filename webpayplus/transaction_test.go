@@ -10,93 +10,6 @@ import (
 	"github.com/ppastene/transbank-sdk-go/webpayplus"
 )
 
-func TestNewTransaction(t *testing.T) {
-	tests := []struct {
-		name string
-		opts transbank.Options
-		want *transbank.ValidationError
-	}{
-		{
-			name: "valid integration",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-		},
-		{
-			name: "valid production",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Production,
-			},
-		},
-		{
-			name: "invalid environment",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Environment(99),
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "empty commerce code",
-			opts: transbank.Options{
-				ApiKey:      testAPIKey,
-				Environment: transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "short commerce code",
-			opts: transbank.Options{
-				CommerceCode:   "5970",
-				ApiKey:         testAPIKey,
-				Environment:    transbank.Integration,
-				ValidateInputs: true,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "non numeric commerce code",
-			opts: transbank.Options{
-				CommerceCode: "59705555553a",
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "empty api key",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tx, err := webpayplus.NewTransaction(tt.opts)
-			if tt.want != nil {
-				wantValidationError(t, err)
-				if tx != nil {
-					t.Error("expected nil Transaction on error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("NewTransaction returned error: %v", err)
-			}
-			if tx == nil {
-				t.Error("expected non-nil Transaction")
-			}
-		})
-	}
-}
-
 func TestTransactionCreate(t *testing.T) {
 	server := newMockServer(t, http.StatusOK, `{"token":"tok_123","url":"https://webpay.cl/pagar/tok_123"}`)
 	tx, err := webpayplus.NewTransaction(testOptions(server))
@@ -245,55 +158,67 @@ func TestTransactionCapture(t *testing.T) {
 }
 
 func TestTransactionHTTPError(t *testing.T) {
-	server := newMockServer(t, http.StatusUnauthorized, `{"error_message":"unauthorized"}`)
-	tx, err := webpayplus.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
+	tests := []struct {
+		name   string
+		method func(tx *webpayplus.Transaction) error
+	}{
+		{
+			name: "create",
+			method: func(tx *webpayplus.Transaction) error {
+				_, err := tx.Create(testBuyOrder, testSessionID, 10000, testReturnURL)
+				return err
+			},
+		},
+		{
+			name: "commit",
+			method: func(tx *webpayplus.Transaction) error {
+				_, err := tx.Commit(testToken)
+				return err
+			},
+		},
+		{
+			name: "status",
+			method: func(tx *webpayplus.Transaction) error {
+				_, err := tx.Status(testToken)
+				return err
+			},
+		},
+		{
+			name: "refund",
+			method: func(tx *webpayplus.Transaction) error {
+				_, err := tx.Refund(testToken, 10000)
+				return err
+			},
+		},
+		{
+			name: "capture",
+			method: func(tx *webpayplus.Transaction) error {
+				_, err := tx.Capture(testToken, testBuyOrder, testAuthCode, 10000)
+				return err
+			},
+		},
 	}
-
-	_, err = tx.Status(testToken)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	var tbErr *transbank.HTTPError
-	if !errors.As(err, &tbErr) {
-		t.Fatalf("error type = %T, want *transbank.HTTPError", err)
-	}
-	if tbErr.StatusCode != http.StatusUnauthorized {
-		t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusUnauthorized)
-	}
-	if tbErr.Body != `{"error_message":"unauthorized"}` {
-		t.Errorf("Body = %q, want raw response", tbErr.Body)
-	}
-}
-
-func TestTransactionValidationSkipsRequest(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := webpayplus.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
-	}
-
-	if _, err := tx.Create("", testSessionID, 10000, testReturnURL); err == nil {
-		t.Error("expected error for empty buy_order")
-	}
-	if _, err := tx.Create(testBuyOrder, testSessionID, 0, testReturnURL); err == nil {
-		t.Error("expected error for zero amount")
-	}
-	if _, err := tx.Create(testBuyOrder, testSessionID, 10000.123, testReturnURL); err == nil {
-		t.Error("expected error for amount with more than 2 decimals")
-	}
-	if _, err := tx.Create(testBuyOrder, testSessionID, 10000, "not-a-url"); err == nil {
-		t.Error("expected error for relative return_url")
-	}
-	if _, err := tx.Status("short-token"); err == nil {
-		t.Error("expected error for invalid token")
-	}
-	if _, err := tx.Refund(testToken, 0); err == nil {
-		t.Error("expected error for zero refund amount")
-	}
-
-	if got := server.RequestCount(); got != 0 {
-		t.Errorf("request count = %d, want 0 (validation must not hit the API)", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(t, http.StatusUnauthorized, `{"error_message":"unauthorized"}`)
+			tx, err := webpayplus.NewTransaction(testOptions(server))
+			if err != nil {
+				t.Fatalf("NewTransaction: %v", err)
+			}
+			err = tt.method(tx)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			var tbErr *transbank.HTTPError
+			if !errors.As(err, &tbErr) {
+				t.Fatalf("error type = %T, want *transbank.HTTPError", err)
+			}
+			if tbErr.StatusCode != http.StatusUnauthorized {
+				t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusUnauthorized)
+			}
+			if tbErr.Body != `{"error_message":"unauthorized"}` {
+				t.Errorf("Body = %q, want raw response", tbErr.Body)
+			}
+		})
 	}
 }

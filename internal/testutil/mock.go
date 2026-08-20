@@ -97,17 +97,6 @@ func (m *MockServer) LastRequest() RecordedRequest {
 	return m.requests[len(m.requests)-1]
 }
 
-func WantValidationError(t *testing.T, err error) {
-	t.Helper()
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	var tbErr *transbank.ValidationError
-	if !errors.As(err, &tbErr) {
-		t.Fatalf("error type = %T, want *transbank.ValidationError", err)
-	}
-}
-
 func WantHTTPError(t *testing.T, err error, statusCode int, body string) {
 	t.Helper()
 	if err == nil {
@@ -170,6 +159,20 @@ func AssertBody(t *testing.T, req RecordedRequest, want string) {
 	t.Helper()
 	if req.Body != want {
 		t.Errorf("body = %q, want %q", req.Body, want)
+	}
+}
+
+func WantTransportError(t *testing.T, err error) {
+	t.Helper()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	var tbErr *transbank.TransportError
+	if !errors.As(err, &tbErr) {
+		t.Fatalf("error type = %T, want *transbank.TransportError", err)
+	}
+	if tbErr.Err == nil {
+		t.Error("expected non-nil Err in TransportError")
 	}
 }
 

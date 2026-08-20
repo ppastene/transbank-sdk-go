@@ -499,46 +499,9 @@ distinguishable with `errors.As`:
 
 ### Input validation
 
-The SDK includes validations for each method's parameters (length, format,
-required fields) that run before calling the Transbank API. These validations
-are **disabled by default** to be consistent with the other official Transbank
-SDKs (PHP, Java, Python), where validation is the server's responsibility.
+The SDK includes validations for each method's parameters (length, format, required fields) that run before calling the Transbank API. These validations are **disabled by default** to be consistent with the other official Transbank SDKs (PHP, Java, Python), where validation is the server's responsibility.
 
-If you want the SDK to validate parameters before sending them, enable the
-`ValidateInputs` option in the connection options:
-
-```go
-opts := transbank.Options{
-	CommerceCode:   "597055555532",
-	ApiKey:         "579B532A7440BB0C9...",
-	Environment:    transbank.Integration,
-	ValidateInputs: true, // enable client-side validations
-}
-```
-
-When `ValidateInputs` is `true`, each method validates its parameters before
-making the HTTP request and returns a `*transbank.ValidationError` if any is
-invalid. This avoids unnecessary API calls.
-
-The validations that are enabled are:
-
-- **Commerce code**: numeric, 12 digits.
-- **Token**: exactly 64 characters.
-- **Buy order**: not empty, max 26 characters, alphanumeric format.
-- **Session ID**: not empty, max 61 characters.
-- **Amount**: greater than 0, max 2 decimal places.
-- **Return URL**: absolute URL format (http/https).
-- **Card number**: numeric, 16 digits.
-- **Card expiration date**: MM/YY format.
-- **CVV**: optional, max 4 numeric digits.
-- **Installments**: integer between 1 and 99.
-- **Username**: not empty, max 40 characters.
-- **Email**: not empty, max 100 characters, contains `@`.
-- **TbkUser**: not empty, max 40 characters.
-
-> **Note**: Credential validation (`Environment`, `CommerceCode`, `ApiKey`)
-> in the constructor always runs regardless of this flag, as it corresponds to
-> SDK configuration, not business data.
+The validation of credentials (`Environment`, `CommerceCode`, `ApiKey`) and certain parameters are validated before the API call to avoid problems on the HTTP request.
 
 ```go
 import (

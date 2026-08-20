@@ -20,11 +20,10 @@ type HTTPClient interface {
 }
 
 type Options struct {
-	Environment    Environment
-	CommerceCode   string
-	ApiKey         string
-	HTTPClient     HTTPClient
-	ValidateInputs bool
+	Environment  Environment
+	CommerceCode string
+	ApiKey       string
+	HTTPClient   HTTPClient
 }
 
 func (o Options) Validate() error {

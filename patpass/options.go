@@ -17,11 +17,10 @@ const (
 // Options configures a PatPass service. It requires an Environment, a numeric
 // CommerceCode and an Authorization key, and optionally an HTTPClient.
 type Options struct {
-	Environment    Environment          // integration or production
-	CommerceCode   string               // numeric commerce code
-	Authorization  string               // authorization key
-	HTTPClient     transbank.HTTPClient // optional custom HTTP client
-	ValidateInputs bool
+	Environment  Environment          // integration or production
+	CommerceCode string               // numeric commerce code
+	Authorization string              // authorization key
+	HTTPClient   transbank.HTTPClient // optional custom HTTP client
 }
 
 // Validate returns an error of type *transbank.ValidationError if the options

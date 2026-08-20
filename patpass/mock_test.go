@@ -43,26 +43,11 @@ func newMockServer(t *testing.T, status int, body string) *mockServer {
 
 func testOptions(m *mockServer) patpass.Options {
 	return patpass.Options{
-		CommerceCode:   testPatpassCommerceCode,
-		Authorization:  testPatpassAuth,
-		Environment:    patpass.Integration,
-		HTTPClient:     m.Client(),
-		ValidateInputs: true,
-	}
-}
-
-func testOptionsNoValidation(m *mockServer) patpass.Options {
-	return patpass.Options{
-		CommerceCode:  testPatpassCommerceCode,
+		CommerceCode: testPatpassCommerceCode,
 		Authorization: testPatpassAuth,
 		Environment:   patpass.Integration,
 		HTTPClient:    m.Client(),
 	}
-}
-
-func wantValidationError(t *testing.T, err error) {
-	t.Helper()
-	testutil.WantValidationError(t, err)
 }
 
 func wantHTTPError(t *testing.T, err error, statusCode int, body string) {

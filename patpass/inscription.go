@@ -5,7 +5,6 @@ package patpass
 import (
 	"fmt"
 
-	"github.com/ppastene/transbank-sdk-go"
 	"github.com/ppastene/transbank-sdk-go/internal"
 )
 
@@ -27,7 +26,7 @@ func NewInscription(opts Options) (*Inscription, error) {
 	if opts.Environment == Production {
 		baseURL = production_url
 	}
-	cfg := internal.NewConfig(opts.CommerceCode, opts.Authorization, baseURL, opts.ValidateInputs)
+	cfg := internal.NewConfig(opts.CommerceCode, opts.Authorization, baseURL)
 	cfg.Headers = map[string]string{
 		"Commercecode":  opts.CommerceCode,
 		"Authorization": opts.Authorization,
@@ -43,40 +42,6 @@ func NewInscription(opts Options) (*Inscription, error) {
 // subscription voucher. maxAmount may be empty. It returns the enrollment token
 // and the URL of the enrollment form.
 func (i *Inscription) Start(url, firstName, fLastname, sLastname, rut, serviceId, finalUrl, maxAmount, phoneNumber, mobileNumber, patPassName, userEmail, commerceEmail, userAddress, userCity string) (*InscriptionStartResponse, error) {
-	if i.config.ValidateInputs {
-		if err := internal.ValidateReturnURL(url); err != nil {
-			return nil, err
-		}
-		if err := internal.ValidateReturnURL(finalUrl); err != nil {
-			return nil, err
-		}
-		if err := internal.ValidateEmail(userEmail); err != nil {
-			return nil, err
-		}
-		if err := internal.ValidateEmail(commerceEmail); err != nil {
-			return nil, err
-		}
-		for _, v := range []struct {
-			value string
-			name  string
-		}{
-			{firstName, "name"},
-			{fLastname, "fLastname"},
-			{sLastname, "sLastname"},
-			{rut, "rut"},
-			{serviceId, "serviceId"},
-			{phoneNumber, "phoneNumber"},
-			{mobileNumber, "mobileNumber"},
-			{patPassName, "patPassName"},
-			{userAddress, "userAddress"},
-			{userCity, "userCity"},
-		} {
-			if v.value == "" {
-				return nil, &transbank.ValidationError{Message: v.name + " must not be empty"}
-			}
-		}
-	}
-
 	payload := map[string]string{
 		"url":             url,
 		"nombre":          firstName,
@@ -98,7 +63,7 @@ func (i *Inscription) Start(url, firstName, fLastname, sLastname, rut, serviceId
 
 	var response InscriptionStartResponse
 	if err := internal.NewRequestor(&i.config).Post(fmt.Sprintf("%s/patInscription", inscriptionPath), payload, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("patpass start: %w", err)
 	}
 
 	return &response, nil
@@ -107,17 +72,12 @@ func (i *Inscription) Start(url, firstName, fLastname, sLastname, rut, serviceId
 // Status returns the state of a previously started enrollment identified by its
 // token, indicating whether it was authorized and the URL of the voucher.
 func (i *Inscription) Status(token string) (*InscriptionStatusResponse, error) {
-	if i.config.ValidateInputs {
-		if err := internal.ValidateToken(token); err != nil {
-			return nil, err
-		}
-	}
 	payload := map[string]string{
 		"token": token,
 	}
 	var response InscriptionStatusResponse
 	if err := internal.NewRequestor(&i.config).Post(fmt.Sprintf("%s/status", inscriptionPath), payload, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("patpass status: %w", err)
 	}
 
 	return &response, nil

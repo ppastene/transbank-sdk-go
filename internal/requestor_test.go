@@ -1,8 +1,8 @@
 package internal
 
 import (
-	"errors"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -44,7 +44,7 @@ func TestRequestorPostSendsHeadersAndDecodesBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, )
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     testCommerceCode,
 		"Tbk-Api-Key-Secret": testAPIKey,
@@ -83,7 +83,7 @@ func TestRequestorReturnsAPIErrorOnNonSuccess(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, )
 	requestor := NewRequestor(&cfg)
 
 	err := requestor.Get("/transactions", nil)
@@ -91,8 +91,8 @@ func TestRequestorReturnsAPIErrorOnNonSuccess(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	tbErr, ok := err.(*transbank.HTTPError)
-	if !ok {
+	var tbErr *transbank.HTTPError
+	if !errors.As(err, &tbErr) {
 		t.Fatalf("error type = %T, want *transbank.HTTPError", err)
 	}
 	if tbErr.StatusCode != http.StatusUnauthorized {
@@ -116,7 +116,7 @@ func (c *stubClient) Do(req *http.Request) (*http.Response, error) {
 
 func TestRequestorUsesInjectedHTTPClient(t *testing.T) {
 	client := &stubClient{}
-	cfg := NewConfig(testCommerceCode, testAPIKey, "https://webpay3gint.transbank.cl", false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, "https://webpay3gint.transbank.cl", )
 	cfg.HTTP = client
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     testCommerceCode,
@@ -154,7 +154,7 @@ func TestRequestorPut(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, )
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     testCommerceCode,
 		"Tbk-Api-Key-Secret": testAPIKey,
@@ -187,7 +187,7 @@ func TestRequestorDelete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, )
 	cfg.Headers = map[string]string{
 		"Tbk-Api-Key-Id":     testCommerceCode,
 		"Tbk-Api-Key-Secret": testAPIKey,
@@ -210,7 +210,7 @@ func TestRequestorJSONDecodeFailure(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, )
 	requestor := NewRequestor(&cfg)
 
 	var result struct{ Token string }
@@ -234,7 +234,7 @@ func TestRequestorEmptyBodyWithResult(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, )
 	requestor := NewRequestor(&cfg)
 
 	var result struct{ Token string }
@@ -258,14 +258,13 @@ func TestRequestorEmptyBodyWithoutResult(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, )
 	requestor := NewRequestor(&cfg)
 
 	if err := requestor.Get("/resource", nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
-
 
 func TestRequestorHTTPStatusBoundary299(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -275,7 +274,7 @@ func TestRequestorHTTPStatusBoundary299(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, server.URL, )
 	requestor := NewRequestor(&cfg)
 
 	var result struct{ Token string }
@@ -288,15 +287,12 @@ func TestRequestorHTTPStatusBoundary299(t *testing.T) {
 }
 
 func TestRequestorTransportErrorUnwrap(t *testing.T) {
-	cfg := NewConfig(testCommerceCode, testAPIKey, "http://127.0.0.1:1", false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, "http://127.0.0.1:1", )
 	requestor := NewRequestor(&cfg)
 
 	err := requestor.Get("/resource", nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
-	}
-	if !errors.Is(err, err) {
-		t.Error("errors.Is failed for TransportError")
 	}
 	var tbErr *transbank.TransportError
 	if !errors.As(err, &tbErr) {
@@ -308,7 +304,7 @@ func TestRequestorTransportErrorUnwrap(t *testing.T) {
 }
 
 func TestNewConfigDefaultTimeout(t *testing.T) {
-	cfg := NewConfig(testCommerceCode, testAPIKey, "https://example.com", false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, "https://example.com", )
 	httpClient, ok := cfg.HTTP.(*http.Client)
 	if !ok {
 		t.Fatalf("HTTP type = %T, want *http.Client", cfg.HTTP)
@@ -319,7 +315,7 @@ func TestNewConfigDefaultTimeout(t *testing.T) {
 }
 
 func TestSetBaseURL(t *testing.T) {
-	cfg := NewConfig(testCommerceCode, testAPIKey, "https://old.example.com", false)
+	cfg := NewConfig(testCommerceCode, testAPIKey, "https://old.example.com", )
 	cfg.SetBaseURL("https://new.example.com")
 	if cfg.BaseURL != "https://new.example.com" {
 		t.Errorf("BaseURL = %q, want https://new.example.com", cfg.BaseURL)

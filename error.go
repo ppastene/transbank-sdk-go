@@ -23,6 +23,9 @@ type TransportError struct {
 }
 
 func (e *TransportError) Error() string {
+	if e.Err != nil {
+		return fmt.Sprintf("%s: %v", e.Message, e.Err)
+	}
 	return e.Message
 }
 

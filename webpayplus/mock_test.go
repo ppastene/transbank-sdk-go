@@ -30,26 +30,11 @@ func newMockServer(t *testing.T, status int, body string) *mockServer {
 
 func testOptions(m *mockServer) transbank.Options {
 	return transbank.Options{
-		CommerceCode:   testCommerceCode,
-		ApiKey:         testAPIKey,
-		Environment:    transbank.Integration,
-		HTTPClient:     m.Client(),
-		ValidateInputs: true,
-	}
-}
-
-func testOptionsNoValidation(m *mockServer) transbank.Options {
-	return transbank.Options{
 		CommerceCode: testCommerceCode,
 		ApiKey:       testAPIKey,
 		Environment:  transbank.Integration,
 		HTTPClient:   m.Client(),
 	}
-}
-
-func wantValidationError(t *testing.T, err error) {
-	t.Helper()
-	testutil.WantValidationError(t, err)
 }
 
 func assertRequest(t *testing.T, req recordedRequest, method, path string) {

@@ -21,28 +21,40 @@ func TestUnmarshalInscriptionStartResponse(t *testing.T) {
 	}
 }
 
-func TestUnmarshalInscriptionStatusResponseAuthorizedTrue(t *testing.T) {
-	resp := patpass.InscriptionStatusResponse{}
-	err := json.Unmarshal([]byte(`{"authorized":true,"voucherUrl":"`+testVoucherURL+`"}`), &resp)
-	if err != nil {
-		t.Fatalf("Unmarshal error: %v", err)
+func TestUnmarshalInscriptionStatusResponse(t *testing.T) {
+	tests := []struct {
+		name       string
+		json       string
+		authorized bool
+		voucher    string
+	}{
+		{
+			name:       "authorized true",
+			json:       `{"authorized":true,"voucherUrl":"` + testVoucherURL + `"}`,
+			authorized: true,
+			voucher:    testVoucherURL,
+		},
+		{
+			name:       "authorized false",
+			json:       `{"authorized":false,"voucherUrl":"` + testVoucherURL + `"}`,
+			authorized: false,
+			voucher:    testVoucherURL,
+		},
 	}
-	if !resp.Authorized {
-		t.Error("Authorized = false, want true")
-	}
-	if resp.VoucherUrl != testVoucherURL {
-		t.Errorf("VoucherUrl = %q, want %q", resp.VoucherUrl, testVoucherURL)
-	}
-}
-
-func TestUnmarshalInscriptionStatusResponseAuthorizedFalse(t *testing.T) {
-	resp := patpass.InscriptionStatusResponse{}
-	err := json.Unmarshal([]byte(`{"authorized":false,"voucherUrl":"`+testVoucherURL+`"}`), &resp)
-	if err != nil {
-		t.Fatalf("Unmarshal error: %v", err)
-	}
-	if resp.Authorized {
-		t.Error("Authorized = true, want false")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := patpass.InscriptionStatusResponse{}
+			err := json.Unmarshal([]byte(tt.json), &resp)
+			if err != nil {
+				t.Fatalf("Unmarshal error: %v", err)
+			}
+			if resp.Authorized != tt.authorized {
+				t.Errorf("Authorized = %v, want %v", resp.Authorized, tt.authorized)
+			}
+			if resp.VoucherUrl != tt.voucher {
+				t.Errorf("VoucherUrl = %q, want %q", resp.VoucherUrl, tt.voucher)
+			}
+		})
 	}
 }
 

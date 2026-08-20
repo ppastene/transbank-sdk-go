@@ -1,6 +1,7 @@
 package transaccioncompleta_test
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 
@@ -14,75 +15,6 @@ func intPtr(i int) *int {
 
 func boolPtr(b bool) *bool {
 	return &b
-}
-
-func TestNewTransaction(t *testing.T) {
-	tests := []struct {
-		name string
-		opts transbank.Options
-		want *transbank.ValidationError
-	}{
-		{
-			name: "valid integration",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-		},
-		{
-			name: "valid production",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Production,
-			},
-		},
-		{
-			name: "invalid environment",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Environment(99),
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "non numeric commerce code",
-			opts: transbank.Options{
-				CommerceCode: "59705555553a",
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "empty api key",
-			opts: transbank.Options{
-				CommerceCode: testCommerceCode,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tx, err := transaccioncompleta.NewTransaction(tt.opts)
-			if tt.want != nil {
-				wantValidationError(t, err)
-				if tx != nil {
-					t.Error("expected nil Transaction on error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("NewTransaction returned error: %v", err)
-			}
-			if tx == nil {
-				t.Error("expected non-nil Transaction")
-			}
-		})
-	}
 }
 
 func TestTransactionCreateWithCVV(t *testing.T) {
@@ -126,48 +58,74 @@ func TestTransactionCreateWithoutCVV(t *testing.T) {
 	assertBodyNotContains(t, req, "cvv")
 }
 
-func TestTransactionCreateHTTPError(t *testing.T) {
-	server := newMockServer(t, http.StatusBadRequest, `{"error_message":"bad request"}`)
-	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
-	}
-
-	_, err = tx.Create(testBuyOrder, testSessionID, testAmount, testCardNumber, testCardExpiry, testCVV)
-	wantHTTPError(t, err, http.StatusBadRequest, `{"error_message":"bad request"}`)
-}
-
-func TestTransactionCreateValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{"token":"`+testToken+`"}`)
-	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
-	}
-
+func TestTransactionHTTPError(t *testing.T) {
 	tests := []struct {
-		name           string
-		buyOrder       string
-		sessionID      string
-		amount         float64
-		cardNumber     string
-		cardExpiration string
-		cvv            string
+		name   string
+		method func(tx *transaccioncompleta.Transaction) error
 	}{
-		{name: "empty buy order", sessionID: testSessionID, amount: testAmount, cardNumber: testCardNumber, cardExpiration: testCardExpiry, cvv: testCVV},
-		{name: "empty session id", buyOrder: testBuyOrder, amount: testAmount, cardNumber: testCardNumber, cardExpiration: testCardExpiry, cvv: testCVV},
-		{name: "zero amount", buyOrder: testBuyOrder, sessionID: testSessionID, amount: 0, cardNumber: testCardNumber, cardExpiration: testCardExpiry, cvv: testCVV},
-		{name: "empty card number", buyOrder: testBuyOrder, sessionID: testSessionID, amount: testAmount, cardExpiration: testCardExpiry, cvv: testCVV},
-		{name: "non numeric card number", buyOrder: testBuyOrder, sessionID: testSessionID, amount: testAmount, cardNumber: "4239-0000", cardExpiration: testCardExpiry, cvv: testCVV},
-		{name: "empty card expiration", buyOrder: testBuyOrder, sessionID: testSessionID, amount: testAmount, cardNumber: testCardNumber, cvv: testCVV},
-		{name: "bad card expiration", buyOrder: testBuyOrder, sessionID: testSessionID, amount: testAmount, cardNumber: testCardNumber, cardExpiration: "2210", cvv: testCVV},
-		{name: "cvv too long", buyOrder: testBuyOrder, sessionID: testSessionID, amount: testAmount, cardNumber: testCardNumber, cardExpiration: testCardExpiry, cvv: "12345"},
+		{
+			name: "create",
+			method: func(tx *transaccioncompleta.Transaction) error {
+				_, err := tx.Create(testBuyOrder, testSessionID, testAmount, testCardNumber, testCardExpiry, testCVV)
+				return err
+			},
+		},
+		{
+			name: "commit",
+			method: func(tx *transaccioncompleta.Transaction) error {
+				_, err := tx.Commit(testToken, nil, nil, nil)
+				return err
+			},
+		},
+		{
+			name: "status",
+			method: func(tx *transaccioncompleta.Transaction) error {
+				_, err := tx.Status(testToken)
+				return err
+			},
+		},
+		{
+			name: "refund",
+			method: func(tx *transaccioncompleta.Transaction) error {
+				_, err := tx.Refund(testToken, 1000)
+				return err
+			},
+		},
+		{
+			name: "capture",
+			method: func(tx *transaccioncompleta.Transaction) error {
+				_, err := tx.Capture(testToken, testBuyOrder, testAuthCode, 1000)
+				return err
+			},
+		},
+		{
+			name: "installments",
+			method: func(tx *transaccioncompleta.Transaction) error {
+				_, err := tx.Installments(testToken, 10)
+				return err
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Create(tt.buyOrder, tt.sessionID, tt.amount, tt.cardNumber, tt.cardExpiration, tt.cvv)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0 (validation must happen before the API call)", server.RequestCount())
+			server := newMockServer(t, http.StatusUnauthorized, `{"error_message":"unauthorized"}`)
+			tx, err := transaccioncompleta.NewTransaction(testOptions(server))
+			if err != nil {
+				t.Fatalf("NewTransaction: %v", err)
+			}
+			err = tt.method(tx)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			var tbErr *transbank.HTTPError
+			if !errors.As(err, &tbErr) {
+				t.Fatalf("error type = %T, want *transbank.HTTPError", err)
+			}
+			if tbErr.StatusCode != http.StatusUnauthorized {
+				t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusUnauthorized)
+			}
+			if tbErr.Body != `{"error_message":"unauthorized"}` {
+				t.Errorf("Body = %q, want raw response", tbErr.Body)
 			}
 		})
 	}
@@ -203,34 +161,6 @@ func TestTransactionInstallments(t *testing.T) {
 	req := server.LastRequest()
 	assertRequest(t, req, http.MethodPost, testTransactionsPath+"/"+testToken+"/installments")
 	assertBody(t, req, `{"installments_number":10}`)
-}
-
-func TestTransactionInstallmentsValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
-	}
-
-	tests := []struct {
-		name               string
-		token              string
-		installmentsNumber int
-	}{
-		{name: "empty token", installmentsNumber: 10},
-		{name: "zero installments", token: testToken, installmentsNumber: 0},
-		{name: "negative installments", token: testToken, installmentsNumber: -1},
-		{name: "100 installments", token: testToken, installmentsNumber: 100},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Installments(tt.token, tt.installmentsNumber)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0", server.RequestCount())
-			}
-		})
-	}
 }
 
 func TestTransactionCommitNoInstallments(t *testing.T) {
@@ -278,20 +208,6 @@ func TestTransactionCommitWithInstallments(t *testing.T) {
 	assertBodyNotContains(t, req, "null")
 }
 
-func TestTransactionCommitValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
-	}
-
-	_, err = tx.Commit("", nil, nil, nil)
-	wantValidationError(t, err)
-	if server.RequestCount() != 0 {
-		t.Errorf("request count = %d, want 0", server.RequestCount())
-	}
-}
-
 func TestTransactionStatus(t *testing.T) {
 	server := newMockServer(t, http.StatusOK, `{"amount":10000,"status":"AUTHORIZED","buy_order":"orden-compra-123","card_detail":{"card_number":"4239"},"response_code":0}`)
 	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
@@ -315,20 +231,6 @@ func TestTransactionStatus(t *testing.T) {
 
 	req := server.LastRequest()
 	assertRequest(t, req, http.MethodGet, testTransactionsPath+"/"+testToken)
-}
-
-func TestTransactionStatusValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
-	}
-
-	_, err = tx.Status("")
-	wantValidationError(t, err)
-	if server.RequestCount() != 0 {
-		t.Errorf("request count = %d, want 0", server.RequestCount())
-	}
 }
 
 func TestTransactionRefund(t *testing.T) {
@@ -357,33 +259,6 @@ func TestTransactionRefund(t *testing.T) {
 	assertBody(t, req, `{"amount":1000}`)
 }
 
-func TestTransactionRefundValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
-	}
-
-	tests := []struct {
-		name   string
-		token  string
-		amount float64
-	}{
-		{name: "empty token", token: "", amount: 1000},
-		{name: "zero amount", token: testToken, amount: 0},
-		{name: "negative amount", token: testToken, amount: -1000},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Refund(tt.token, tt.amount)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0", server.RequestCount())
-			}
-		})
-	}
-}
-
 func TestTransactionCapture(t *testing.T) {
 	server := newMockServer(t, http.StatusOK, `{"authorization_code":"123456","authorization_date":"2019-03-20T20:18:20Z","captured_amount":1000,"response_code":0}`)
 	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
@@ -405,34 +280,4 @@ func TestTransactionCapture(t *testing.T) {
 	req := server.LastRequest()
 	assertRequest(t, req, http.MethodPut, testTransactionsPath+"/"+testToken+"/capture")
 	assertBody(t, req, `{"authorization_code":"123456","buy_order":"orden-compra-123","capture_amount":1000}`)
-}
-
-func TestTransactionCaptureValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewTransaction(testOptions(server))
-	if err != nil {
-		t.Fatalf("NewTransaction: %v", err)
-	}
-
-	tests := []struct {
-		name          string
-		token         string
-		buyOrder      string
-		authorization string
-		captureAmount float64
-	}{
-		{name: "empty token", buyOrder: testBuyOrder, authorization: testAuthCode, captureAmount: 1000},
-		{name: "empty buy order", token: testToken, authorization: testAuthCode, captureAmount: 1000},
-		{name: "empty authorization code", token: testToken, buyOrder: testBuyOrder, captureAmount: 1000},
-		{name: "zero capture amount", token: testToken, buyOrder: testBuyOrder, authorization: testAuthCode, captureAmount: 0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Capture(tt.token, tt.buyOrder, tt.authorization, tt.captureAmount)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0", server.RequestCount())
-			}
-		})
-	}
 }

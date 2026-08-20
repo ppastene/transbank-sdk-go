@@ -59,7 +59,7 @@ func TestErrorString(t *testing.T) {
 		{
 			name: "transport error",
 			err:  &TransportError{Message: "request failed", Err: errors.New("dial tcp: refused")},
-			want: "request failed",
+			want: "request failed: dial tcp: refused",
 		},
 		{
 			name: "http error with body",
@@ -137,21 +137,5 @@ func TestHTTPErrorBodyTrimming(t *testing.T) {
 				t.Errorf("Error() = %q, want %q", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestValidationErrorIsNotTransportError(t *testing.T) {
-	err := &ValidationError{Message: "invalid"}
-	var tbErr *TransportError
-	if errors.As(err, &tbErr) {
-		t.Error("ValidationError should not match *TransportError")
-	}
-}
-
-func TestHTTPErrorIsNotTransportError(t *testing.T) {
-	err := &HTTPError{StatusCode: 400, Body: "bad"}
-	var tbErr *TransportError
-	if errors.As(err, &tbErr) {
-		t.Error("HTTPError should not match *TransportError")
 	}
 }

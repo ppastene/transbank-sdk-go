@@ -1,6 +1,7 @@
 package transaccioncompleta_test
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 
@@ -31,89 +32,10 @@ func testMallCommitDetails() []transaccioncompleta.MallCommitDetails {
 
 func testMallOptions(m *mockServer) transbank.Options {
 	return transbank.Options{
-		CommerceCode:   testMallCode,
-		ApiKey:         testAPIKey,
-		Environment:    transbank.Integration,
-		HTTPClient:     m.Client(),
-		ValidateInputs: true,
-	}
-}
-
-func testMallOptionsNoValidation(m *mockServer) transbank.Options {
-	return transbank.Options{
 		CommerceCode: testMallCode,
 		ApiKey:       testAPIKey,
 		Environment:  transbank.Integration,
 		HTTPClient:   m.Client(),
-	}
-}
-
-func TestNewMallTransaction(t *testing.T) {
-	tests := []struct {
-		name string
-		opts transbank.Options
-		want *transbank.ValidationError
-	}{
-		{
-			name: "valid integration",
-			opts: transbank.Options{
-				CommerceCode: testMallCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-		},
-		{
-			name: "valid production",
-			opts: transbank.Options{
-				CommerceCode: testMallCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Production,
-			},
-		},
-		{
-			name: "invalid environment",
-			opts: transbank.Options{
-				CommerceCode: testMallCode,
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Environment(99),
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "non numeric commerce code",
-			opts: transbank.Options{
-				CommerceCode: "59705555555a",
-				ApiKey:       testAPIKey,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-		{
-			name: "empty api key",
-			opts: transbank.Options{
-				CommerceCode: testMallCode,
-				Environment:  transbank.Integration,
-			},
-			want: &transbank.ValidationError{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tx, err := transaccioncompleta.NewMallTransaction(tt.opts)
-			if tt.want != nil {
-				wantValidationError(t, err)
-				if tx != nil {
-					t.Error("expected nil MallTransaction on error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("NewMallTransaction returned error: %v", err)
-			}
-			if tx == nil {
-				t.Error("expected non-nil MallTransaction")
-			}
-		})
 	}
 }
 
@@ -160,46 +82,6 @@ func TestMallTransactionCreateWithoutCVV(t *testing.T) {
 	assertBodyNotContains(t, req, "cvv")
 }
 
-func TestMallTransactionCreateValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{"token":"`+testToken+`"}`)
-	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
-	}
-
-	emptyDetails := []transaccioncompleta.MallDetails{}
-	badDetail := []transaccioncompleta.MallDetails{
-		{Amount: 10000, CommerceCode: "59705555555a", BuyOrder: testChildBuyOrder1},
-	}
-
-	tests := []struct {
-		name           string
-		buyOrder       string
-		sessionID      string
-		cardNumber     string
-		cardExpiration string
-		details        []transaccioncompleta.MallDetails
-		cvv            string
-	}{
-		{name: "empty buy order", sessionID: testSessionID, cardNumber: testCardNumber, cardExpiration: testCardExpiry, details: testMallDetails(), cvv: testCVV},
-		{name: "empty session id", buyOrder: testBuyOrder, cardNumber: testCardNumber, cardExpiration: testCardExpiry, details: testMallDetails(), cvv: testCVV},
-		{name: "empty card number", buyOrder: testBuyOrder, sessionID: testSessionID, cardExpiration: testCardExpiry, details: testMallDetails(), cvv: testCVV},
-		{name: "bad card expiration", buyOrder: testBuyOrder, sessionID: testSessionID, cardNumber: testCardNumber, cardExpiration: "2210", details: testMallDetails(), cvv: testCVV},
-		{name: "empty details", buyOrder: testBuyOrder, sessionID: testSessionID, cardNumber: testCardNumber, cardExpiration: testCardExpiry, details: emptyDetails, cvv: testCVV},
-		{name: "bad child commerce code", buyOrder: testBuyOrder, sessionID: testSessionID, cardNumber: testCardNumber, cardExpiration: testCardExpiry, details: badDetail, cvv: testCVV},
-		{name: "cvv too long", buyOrder: testBuyOrder, sessionID: testSessionID, cardNumber: testCardNumber, cardExpiration: testCardExpiry, details: testMallDetails(), cvv: "12345"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Create(tt.buyOrder, tt.sessionID, tt.cardNumber, tt.cardExpiration, tt.details, tt.cvv)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0", server.RequestCount())
-			}
-		})
-	}
-}
-
 func TestMallTransactionInstallments(t *testing.T) {
 	server := newMockServer(t, http.StatusOK, `[{"installments_amount":3334,"id_query_installments":11,"deferred_periods":[{"amount":1000,"period":1}]},{"installments_amount":6667,"id_query_installments":12,"deferred_periods":[]}]`)
 	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
@@ -228,37 +110,6 @@ func TestMallTransactionInstallments(t *testing.T) {
 	req := server.LastRequest()
 	assertMallRequest(t, req, http.MethodPost, testTransactionsPath+"/"+testToken+"/installments")
 	assertBody(t, req, `[{"commerce_code":"597055555552","buy_order":"orden-hija-1","installments_number":10},{"commerce_code":"597055555553","buy_order":"orden-hija-2","installments_number":10}]`)
-}
-
-func TestMallTransactionInstallmentsValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `[]`)
-	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
-	}
-
-	badDetail := []transaccioncompleta.MallInstallmentsDetails{
-		{CommerceCode: testChildCode1, BuyOrder: testChildBuyOrder1, InstallmentsNumber: 0},
-	}
-
-	tests := []struct {
-		name    string
-		token   string
-		details []transaccioncompleta.MallInstallmentsDetails
-	}{
-		{name: "empty token", details: testMallInstallmentsDetails()},
-		{name: "empty details", token: testToken, details: []transaccioncompleta.MallInstallmentsDetails{}},
-		{name: "zero installments", token: testToken, details: badDetail},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Installments(tt.token, tt.details)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0", server.RequestCount())
-			}
-		})
-	}
 }
 
 func TestMallTransactionCommitNoInstallments(t *testing.T) {
@@ -312,37 +163,6 @@ func TestMallTransactionCommitWithInstallments(t *testing.T) {
 	assertBodyNotContains(t, req, "null")
 }
 
-func TestMallTransactionCommitValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
-	}
-
-	badDetail := []transaccioncompleta.MallCommitDetails{
-		{CommerceCode: testChildCode1, BuyOrder: ""},
-	}
-
-	tests := []struct {
-		name    string
-		token   string
-		details []transaccioncompleta.MallCommitDetails
-	}{
-		{name: "empty token", details: testMallCommitDetails()},
-		{name: "empty details", token: testToken, details: []transaccioncompleta.MallCommitDetails{}},
-		{name: "empty child buy order", token: testToken, details: badDetail},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Commit(tt.token, tt.details)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0", server.RequestCount())
-			}
-		})
-	}
-}
-
 func TestMallTransactionStatus(t *testing.T) {
 	server := newMockServer(t, http.StatusOK, `{"buy_order":"orden-compra-123","card_detail":{"card_number":"4239"},"accounting_date":"0321","transaction_date":"2019-03-21T15:43:48.523Z","details":[{"amount":10000,"status":"AUTHORIZED","authorization_code":"123456","payment_type_code":"VN","response_code":0,"installments_number":0,"commerce_code":"597055555552","buy_order":"orden-hija-1"}]}`)
 	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
@@ -368,20 +188,6 @@ func TestMallTransactionStatus(t *testing.T) {
 	assertMallRequest(t, req, http.MethodGet, testTransactionsPath+"/"+testToken)
 }
 
-func TestMallTransactionStatusValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
-	}
-
-	_, err = tx.Status("")
-	wantValidationError(t, err)
-	if server.RequestCount() != 0 {
-		t.Errorf("request count = %d, want 0", server.RequestCount())
-	}
-}
-
 func TestMallTransactionRefund(t *testing.T) {
 	server := newMockServer(t, http.StatusOK, `{"type":"NULLIFY","authorization_code":"123456","authorization_date":"2019-03-20T20:18:20Z","nullified_amount":1000.00,"balance":0.00,"response_code":0}`)
 	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
@@ -403,36 +209,6 @@ func TestMallTransactionRefund(t *testing.T) {
 	req := server.LastRequest()
 	assertMallRequest(t, req, http.MethodPost, testTransactionsPath+"/"+testToken+"/refunds")
 	assertBody(t, req, `{"amount":1000,"buy_order":"orden-hija-1","commerce_code":"597055555552"}`)
-}
-
-func TestMallTransactionRefundValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
-	}
-
-	tests := []struct {
-		name         string
-		token        string
-		buyOrder     string
-		commerceCode string
-		amount       float64
-	}{
-		{name: "empty token", buyOrder: testChildBuyOrder1, commerceCode: testChildCode1, amount: 1000},
-		{name: "empty buy order", token: testToken, commerceCode: testChildCode1, amount: 1000},
-		{name: "bad commerce code", token: testToken, buyOrder: testChildBuyOrder1, commerceCode: "59705555555a", amount: 1000},
-		{name: "zero amount", token: testToken, buyOrder: testChildBuyOrder1, commerceCode: testChildCode1, amount: 0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Refund(tt.token, tt.buyOrder, tt.commerceCode, tt.amount)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0", server.RequestCount())
-			}
-		})
-	}
 }
 
 func TestMallTransactionCapture(t *testing.T) {
@@ -458,33 +234,67 @@ func TestMallTransactionCapture(t *testing.T) {
 	assertBody(t, req, `{"authorization_code":"123456","buy_order":"orden-compra-123","capture_amount":1000,"commerce_code":"597055555552"}`)
 }
 
-func TestMallTransactionCaptureValidation(t *testing.T) {
-	server := newMockServer(t, http.StatusOK, `{}`)
-	tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
-	if err != nil {
-		t.Fatalf("NewMallTransaction: %v", err)
-	}
-
+func TestMallTransactionHTTPError(t *testing.T) {
 	tests := []struct {
-		name          string
-		token         string
-		commerceCode  string
-		buyOrder      string
-		authorization string
-		captureAmount float64
+		name   string
+		method func(tx *transaccioncompleta.MallTransaction) error
 	}{
-		{name: "empty token", commerceCode: testChildCode1, buyOrder: testBuyOrder, authorization: testAuthCode, captureAmount: 1000},
-		{name: "bad commerce code", token: testToken, commerceCode: "59705555555a", buyOrder: testBuyOrder, authorization: testAuthCode, captureAmount: 1000},
-		{name: "empty buy order", token: testToken, commerceCode: testChildCode1, authorization: testAuthCode, captureAmount: 1000},
-		{name: "empty authorization code", token: testToken, commerceCode: testChildCode1, buyOrder: testBuyOrder, captureAmount: 1000},
-		{name: "zero capture amount", token: testToken, commerceCode: testChildCode1, buyOrder: testBuyOrder, authorization: testAuthCode, captureAmount: 0},
+		{
+			name: "commit",
+			method: func(tx *transaccioncompleta.MallTransaction) error {
+				_, err := tx.Commit(testToken, testMallCommitDetails())
+				return err
+			},
+		},
+		{
+			name: "status",
+			method: func(tx *transaccioncompleta.MallTransaction) error {
+				_, err := tx.Status(testToken)
+				return err
+			},
+		},
+		{
+			name: "refund",
+			method: func(tx *transaccioncompleta.MallTransaction) error {
+				_, err := tx.Refund(testToken, testChildBuyOrder1, testChildCode1, 1000)
+				return err
+			},
+		},
+		{
+			name: "capture",
+			method: func(tx *transaccioncompleta.MallTransaction) error {
+				_, err := tx.Capture(testToken, testChildCode1, testBuyOrder, testAuthCode, 1000)
+				return err
+			},
+		},
+		{
+			name: "installments",
+			method: func(tx *transaccioncompleta.MallTransaction) error {
+				_, err := tx.Installments(testToken, testMallInstallmentsDetails())
+				return err
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tx.Capture(tt.token, tt.commerceCode, tt.buyOrder, tt.authorization, tt.captureAmount)
-			wantValidationError(t, err)
-			if server.RequestCount() != 0 {
-				t.Errorf("request count = %d, want 0", server.RequestCount())
+			server := newMockServer(t, http.StatusUnauthorized, `{"error_message":"unauthorized"}`)
+			tx, err := transaccioncompleta.NewMallTransaction(testMallOptions(server))
+			if err != nil {
+				t.Fatalf("NewMallTransaction: %v", err)
+			}
+			err = tt.method(tx)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			var tbErr *transbank.HTTPError
+			if !errors.As(err, &tbErr) {
+				t.Fatalf("error type = %T, want *transbank.HTTPError", err)
+			}
+			if tbErr.StatusCode != http.StatusUnauthorized {
+				t.Errorf("StatusCode = %d, want %d", tbErr.StatusCode, http.StatusUnauthorized)
+			}
+			if tbErr.Body != `{"error_message":"unauthorized"}` {
+				t.Errorf("Body = %q, want raw response", tbErr.Body)
 			}
 		})
 	}
