@@ -64,7 +64,6 @@ opts := transbank.Options{
 	CommerceCode: "597055555532",         // your commerce code
 	ApiKey:       "579B532A7440BB0C9...", // your secret key
 	Environment:  transbank.Integration,  // or transbank.Production
-	// ValidateInputs: true,             // optional: enable input validations
 }
 
 tx, err := webpayplus.NewTransaction(opts)

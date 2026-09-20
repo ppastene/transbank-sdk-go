@@ -64,7 +64,6 @@ opts := transbank.Options{
 	CommerceCode: "597055555532",         // su código de comercio
 	ApiKey:       "579B532A7440BB0C9...", // su llave secreta
 	Environment:  transbank.Integration,  // o transbank.Production
-	// ValidateInputs: true,             // opcional: activar validaciones de parámetros
 }
 
 tx, err := webpayplus.NewTransaction(opts)
@@ -151,28 +150,32 @@ details := []webpayplus.MallDetails{
 	},
 }
 
+// Crear una transaccion
 create, err := mallTx.Create("orden-de-compra", "id-de-sesion", "https://www.mi-tienda.cl/retorno", details)
 if err != nil {
 	// manejar el error
 }
 _ = create.Token
 
+// Confirmar una transaccion
 commit, err := mallTx.Commit("token")
 if err != nil {
 	// manejar el error
 }
 
+// Consultar el estado de una transacción
 status, err := mallTx.Status("token")
 if err != nil {
 	// manejar el error
 }
 
+// Reembolsar una transacción
 refund, err := mallTx.Refund("token", "orden-detalle-1234", "597055555536", 10000)
 if err != nil {
 	// manejar el error
 }
 
-// Solo en ambientes con captura diferida
+// Capturar una transacción (solo en ambientes con captura diferida)
 capture, err := mallTx.Capture("token", "597055555536", "orden-detalle-1234", "codigo-de-autorizacion", 10000)
 if err != nil {
 	// manejar el error
@@ -268,7 +271,7 @@ if err != nil {
 	// manejar el error
 }
 
-// Solo en ambientes con captura diferida
+// Capturar una transacción (solo en ambientes con captura diferida)
 capture, err := tx.Capture("orden-de-compra", "597055555548", "codigo-de-autorizacion", 10000)
 if err != nil {
 	// manejar el error
